@@ -44,13 +44,22 @@ class Action(models.Model):
 
 
 class Example(models.Model):
-    """A single film example of an Action — metadata + a deep-link out. We never host video."""
+    """A single film example of an Action — an embedded, trimmed YouTube clip."""
     action = models.ForeignKey(Action, on_delete=models.CASCADE, related_name="examples")
     player = models.ForeignKey(Player, on_delete=models.SET_NULL, null=True, blank=True, related_name="examples")
     title = models.CharField(max_length=200, help_text="e.g. 'LeBron pistol into stepback, 2024 vs BOS'")
-    source_url = models.URLField(help_text="Deep-link to the clip on its official/public source.")
+    youtube_id = models.CharField(max_length=20, help_text="Just the ID, e.g. '-62TOKx8mfA' (the part after v=)")
+    start_seconds = models.PositiveIntegerField(default=0, help_text="Clip start time in seconds.")
+    end_seconds = models.PositiveIntegerField(null=True, blank=True, help_text="Clip end time in seconds. Leave blank to play to the end.")
     note = models.TextField(blank=True, help_text="What to watch for in this clip.")
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
         return self.title
+
+    @property
+    def embed_url(self):
+        url = f"https://www.youtube.com/embed/{self.youtube_id}?start={self.start_seconds}"
+        if self.end_seconds:
+            url += f"&end={self.end_seconds}"
+        return url

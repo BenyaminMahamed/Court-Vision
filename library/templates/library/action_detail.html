@@ -18,8 +18,12 @@
     <h2>Film Examples</h2>
     {% for example in action.examples.all %}
         <div>
-            <a href="{{ example.source_url }}" target="_blank">{{ example.title }}</a>
-            {% if example.player %}<em>({{ example.player.name }})</em>{% endif %}
+            <h3>{{ example.title }}{% if example.player %} <em>({{ example.player.name }})</em>{% endif %}</h3>
+            <iframe width="560" height="315"
+                    src="{{ example.embed_url }}"
+                    frameborder="0"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowfullscreen></iframe>
             {% if example.note %}<p>{{ example.note }}</p>{% endif %}
         </div>
     {% empty %}

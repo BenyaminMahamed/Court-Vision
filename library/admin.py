@@ -25,6 +25,6 @@ class PlayerAdmin(admin.ModelAdmin):
 
 @admin.register(Example)
 class ExampleAdmin(admin.ModelAdmin):
-    list_display = ("title", "action", "player")
+    list_display = ("title", "action", "player", "youtube_id")
     list_filter = ("action",)
     search_fields = ("title", "note")
