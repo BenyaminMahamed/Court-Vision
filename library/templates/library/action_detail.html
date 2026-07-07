@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ action.name }} — Court Vision</title>
+</head>
+<body>
+    <p><a href="{% url 'library:action_list' %}">← Back to library</a></p>
+    <h1>{{ action.name }}</h1>
+    <p><strong>Category:</strong> {{ action.get_category_display }}
+       &nbsp;|&nbsp; <strong>Difficulty:</strong> {{ action.get_difficulty_display }}</p>
+    {% if action.aliases %}<p><strong>Also known as:</strong> {{ action.aliases }}</p>{% endif %}
+
+    <h2>Breakdown</h2>
+    <p>{{ action.breakdown|linebreaks }}</p>
+
+    <h2>Film Examples</h2>
+    {% for example in action.examples.all %}
+        <div>
+            <a href="{{ example.source_url }}" target="_blank">{{ example.title }}</a>
+            {% if example.player %}<em>({{ example.player.name }})</em>{% endif %}
+            {% if example.note %}<p>{{ example.note }}</p>{% endif %}
+        </div>
+    {% empty %}
+        <p>No film examples yet.</p>
+    {% endfor %}
+</body>
+</html>

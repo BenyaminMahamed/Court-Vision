@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Court Vision — Action Library</title>
+</head>
+<body>
+    <h1>Court Vision</h1>
+    <p>Learn to read the game. A library of basketball actions.</p>
+    <ul>
+        {% for action in actions %}
+            <li>
+                <a href="{% url 'library:action_detail' action.slug %}">{{ action.name }}</a>
+                — {{ action.get_category_display }}
+            </li>
+        {% empty %}
+            <li>No actions yet.</li>
+        {% endfor %}
+    </ul>
+</body>
+</html>
