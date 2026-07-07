@@ -59,7 +59,7 @@ class Example(models.Model):
 
     @property
     def embed_url(self):
-        url = f"https://www.youtube.com/embed/{self.youtube_id}?start={self.start_seconds}"
+        url = f"https://www.youtube.com/embed/{self.youtube_id}?start={self.start_seconds}&rel=0&modestbranding=1&vq=hd1080"
         if self.end_seconds:
             url += f"&end={self.end_seconds}"
         return url
