@@ -19,11 +19,9 @@
     {% for example in action.examples.all %}
         <div>
             <h3>{{ example.title }}{% if example.player %} <em>({{ example.player.name }})</em>{% endif %}</h3>
-            <iframe width="560" height="315"
-                    src="{{ example.embed_url }}"
-                    frameborder="0"
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                    allowfullscreen></iframe>
+            <p><a href="https://www.youtube.com/watch?v={{ example.youtube_id }}&t={{ example.start_seconds }}s" target="_blank" rel="noopener">
+                ▶ Watch clip on YouTube (starts at {{ example.start_seconds }}s)
+            </a></p>
             {% if example.note %}<p>{{ example.note }}</p>{% endif %}
         </div>
     {% empty %}
