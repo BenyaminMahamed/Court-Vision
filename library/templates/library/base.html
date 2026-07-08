@@ -1,0 +1,98 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Court Vision{% endblock %}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Archivo+Narrow:wght@500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --base:      #0E1013;
+            --surface:   #161A1F;
+            --raised:    #1C2128;
+            --text:      #E8E6E1;
+            --muted:     #7C8794;
+            --slate:     #5B6470;
+            --accent:    #E8703A;
+            --accent-dim:#B4551F;
+            --border:    #2A3038;
+
+            --display: 'Archivo Narrow', 'Oswald', sans-serif;
+            --body: 'Inter', sans-serif;
+            --mono: 'IBM Plex Mono', monospace;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { background: var(--base); color: var(--text); font-family: var(--body); line-height: 1.6; -webkit-font-smoothing: antialiased; }
+        a { color: inherit; text-decoration: none; }
+        .wrap { max-width: 980px; margin: 0 auto; padding: 0 24px; }
+
+        .masthead { border-bottom: 1px solid var(--border); padding: 20px 0; position: sticky; top: 0; background: rgba(14,16,19,0.92); backdrop-filter: blur(8px); z-index: 10; }
+        .masthead .wrap { display: flex; align-items: baseline; gap: 16px; }
+        .brand { font-family: var(--display); font-weight: 700; font-size: 24px; letter-spacing: 0.02em; text-transform: uppercase; }
+        .brand .vision { color: var(--accent); }
+        .tagline { font-family: var(--mono); font-size: 11px; color: var(--slate); text-transform: uppercase; letter-spacing: 0.08em; }
+
+        main { padding: 48px 0 80px; }
+        .eyebrow { font-family: var(--mono); font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--accent); margin-bottom: 10px; }
+        h1.page-title { font-family: var(--display); font-weight: 700; font-size: clamp(38px, 7vw, 62px); line-height: 0.98; letter-spacing: -0.01em; text-transform: uppercase; }
+        .lede { color: var(--muted); font-size: 17px; max-width: 60ch; margin-top: 16px; }
+
+        .lib-count { font-family: var(--mono); font-size: 12px; color: var(--slate); text-transform: uppercase; letter-spacing: 0.08em; margin-top: 32px; padding-bottom: 10px; border-bottom: 1px solid var(--border); }
+        .action-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1px; background: var(--border); border: 1px solid var(--border); border-top: none; }
+        .action-card { background: var(--surface); padding: 24px 22px 26px; transition: background 0.15s ease; display: block; position: relative; }
+        .action-card:hover { background: var(--raised); }
+        .action-card .card-cat { font-family: var(--mono); font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--slate); }
+        .action-card .card-name { font-family: var(--display); font-weight: 600; font-size: 27px; text-transform: uppercase; letter-spacing: 0.01em; margin: 12px 0 6px; line-height: 1.05; }
+        .action-card:hover .card-name { color: var(--accent); }
+        .action-card .card-diff { font-family: var(--mono); font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; }
+        .action-card .card-arrow { font-family: var(--mono); font-size: 12px; color: var(--slate); margin-top: 16px; }
+        .action-card:hover .card-arrow { color: var(--accent); }
+        .empty { border: 1px solid var(--border); padding: 40px; text-align: center; color: var(--muted); margin-top: 24px; }
+
+        .backlink { font-family: var(--mono); font-size: 12px; color: var(--slate); text-transform: uppercase; letter-spacing: 0.06em; display: inline-block; margin-bottom: 28px; }
+        .backlink:hover { color: var(--accent); }
+        .scout-meta { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 22px; padding: 16px 0; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+        .tag { font-family: var(--mono); font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; padding: 5px 10px; border: 1px solid var(--border); color: var(--muted); }
+        .tag.accent { color: var(--accent); border-color: var(--accent-dim); }
+        .section-label { font-family: var(--mono); font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--slate); margin: 44px 0 16px; padding-bottom: 8px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: baseline; }
+        .section-label .hint { color: var(--border); font-size: 10px; letter-spacing: 0.06em; }
+        .breakdown p { font-size: 17px; line-height: 1.7; margin-bottom: 18px; max-width: 66ch; }
+
+        .playtypes { display: flex; flex-wrap: wrap; gap: 8px; }
+        .chip { font-family: var(--mono); font-size: 12px; letter-spacing: 0.04em; padding: 8px 12px; background: var(--surface); border: 1px solid var(--border); color: var(--text); }
+        .chip .chip-label { display: block; font-size: 9px; color: var(--slate); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 3px; }
+
+        .stats-pending { border: 1px dashed var(--border); padding: 22px; font-family: var(--mono); font-size: 12px; color: var(--slate); letter-spacing: 0.04em; line-height: 1.7; }
+
+        .example { border: 1px solid var(--border); padding: 20px 22px; margin-bottom: 14px; }
+        .example .ex-title { font-family: var(--display); font-weight: 600; font-size: 20px; text-transform: uppercase; }
+        .example .ex-player { color: var(--muted); font-style: normal; }
+        .example .ex-link { font-family: var(--mono); font-size: 12px; color: var(--accent); text-transform: uppercase; letter-spacing: 0.05em; display: inline-block; margin: 10px 0; }
+        .example .ex-link:hover { text-decoration: underline; }
+        .example .ex-note { color: var(--muted); font-size: 15px; }
+
+        footer { border-top: 1px solid var(--border); padding: 28px 0; font-family: var(--mono); font-size: 11px; color: var(--slate); text-transform: uppercase; letter-spacing: 0.06em; }
+        :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+        @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+    </style>
+</head>
+<body>
+    <header class="masthead">
+        <div class="wrap">
+            <a href="{% url 'library:action_list' %}" class="brand">Court<span class="vision">Vision</span></a>
+            <span class="tagline">Learn to read the game</span>
+        </div>
+    </header>
+    <main>
+        <div class="wrap">
+            {% block content %}{% endblock %}
+        </div>
+    </main>
+    <footer>
+        <div class="wrap">Court Vision — Basketball film study</div>
+    </footer>
+</body>
+</html>

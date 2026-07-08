@@ -1,31 +1,44 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ action.name }} — Court Vision</title>
-</head>
-<body>
-    <p><a href="{% url 'library:action_list' %}">← Back to library</a></p>
-    <h1>{{ action.name }}</h1>
-    <p><strong>Category:</strong> {{ action.get_category_display }}
-       &nbsp;|&nbsp; <strong>Difficulty:</strong> {{ action.get_difficulty_display }}</p>
-    {% if action.aliases %}<p><strong>Also known as:</strong> {{ action.aliases }}</p>{% endif %}
+{% extends "library/base.html" %}
 
-    <h2>Breakdown</h2>
-    <p>{{ action.breakdown|linebreaks }}</p>
+{% block title %}{{ action.name }} — Court Vision{% endblock %}
 
-    <h2>Film Examples</h2>
+{% block content %}
+    <a href="{% url 'library:action_list' %}" class="backlink">&larr; Back to library</a>
+
+    <p class="eyebrow">Scouting Report</p>
+    <h1 class="page-title">{{ action.name }}</h1>
+
+    <div class="scout-meta">
+        <span class="tag accent">{{ action.get_category_display }}</span>
+        <span class="tag">{{ action.get_difficulty_display }}</span>
+        {% if action.aliases %}<span class="tag">AKA {{ action.aliases }}</span>{% endif %}
+    </div>
+
+    <div class="section-label">Breakdown</div>
+    <div class="breakdown">{{ action.breakdown|linebreaks }}</div>
+
+    {% if action.play_type_list %}
+    <div class="section-label">Related Play Types <span class="hint">Synergy</span></div>
+    <div class="playtypes">
+        {% for pt in action.play_type_list %}
+            <span class="chip">{{ pt }}</span>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <div class="section-label">By the Numbers <span class="hint">coming soon</span></div>
+    <div class="stats-pending">
+        Play-type efficiency and player data will appear here once the NBA stats pipeline is connected.
+    </div>
+
+    <div class="section-label">Film Examples</div>
     {% for example in action.examples.all %}
-        <div>
-            <h3>{{ example.title }}{% if example.player %} <em>({{ example.player.name }})</em>{% endif %}</h3>
-            <p><a href="https://www.youtube.com/watch?v={{ example.youtube_id }}&t={{ example.start_seconds }}s" target="_blank" rel="noopener">
-                ▶ Watch clip on YouTube (starts at {{ example.start_seconds }}s)
-            </a></p>
-            {% if example.note %}<p>{{ example.note }}</p>{% endif %}
+        <div class="example">
+            <div class="ex-title">{{ example.title }}{% if example.player %} <span class="ex-player">&mdash; {{ example.player.name }}</span>{% endif %}</div>
+            <a class="ex-link" href="https://www.youtube.com/watch?v={{ example.youtube_id }}&t={{ example.start_seconds }}s" target="_blank" rel="noopener">&#9654; Watch clip &rarr;</a>
+            {% if example.note %}<div class="ex-note">{{ example.note }}</div>{% endif %}
         </div>
     {% empty %}
-        <p>No film examples yet.</p>
+        <div class="empty">No film examples yet.</div>
     {% endfor %}
-</body>
-</html>
+{% endblock %}
