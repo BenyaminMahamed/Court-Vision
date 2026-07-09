@@ -8,11 +8,16 @@
     <p class="lede">A searchable library of basketball actions — what they're called, how they work, and what to watch for on film.</p>
 
     {% if actions %}
-        <div class="lib-count">{{ actions|length }} action{{ actions|length|pluralize }}</div>
+        <div class="lib-count">
+            <span>{{ actions|length }} action{{ actions|length|pluralize }}</span>
+            <span>Scouting reports</span>
+        </div>
         <div class="action-grid">
             {% for action in actions %}
                 <a class="action-card" href="{% url 'library:action_detail' action.slug %}">
-                    <div class="card-cat">{{ action.get_category_display }}</div>
+                    <div class="card-top">
+                        <span class="card-cat">{{ action.get_category_display }}</span>
+                    </div>
                     <div class="card-name">{{ action.name }}</div>
                     <div class="card-diff">{{ action.get_difficulty_display }}</div>
                     <div class="card-arrow">Read the report &rarr;</div>

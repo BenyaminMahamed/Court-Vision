@@ -10,14 +10,32 @@
         <div class="ph-text">
             <p class="eyebrow">Player Profile</p>
             <h1 class="page-title">{{ player.name }}</h1>
-            <div class="scout-meta">
-                <span class="tag accent">{{ shown_count }} shots</span>
-                <span class="tag">{{ fg_pct }}% FG</span>
-                {% if active_season %}<span class="tag">{{ active_season }}</span>{% else %}<span class="tag">All seasons</span>{% endif %}
-            </div>
         </div>
         {% if player.headshot_url %}
-        <img class="player-photo" src="{{ player.headshot_url }}" alt="{{ player.name }}" onerror="this.style.display='none'">
+        <div class="player-photo-wrap">
+            <img class="player-photo" src="{{ player.headshot_url }}" alt="{{ player.name }}" onerror="this.parentNode.style.display='none'">
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="stat-strip">
+        <div class="stat-box">
+            <div class="sb-val">{{ shown_count }}</div>
+            <div class="sb-label">Shots</div>
+        </div>
+        <div class="stat-box">
+            <div class="sb-val accent">{{ fg_pct }}%</div>
+            <div class="sb-label">Field Goal %</div>
+        </div>
+        <div class="stat-box">
+            <div class="sb-val">{{ made }}</div>
+            <div class="sb-label">Made</div>
+        </div>
+        {% if player.team %}
+        <div class="stat-box">
+            <div class="sb-val">{{ player.team }}</div>
+            <div class="sb-label">Team</div>
+        </div>
         {% endif %}
     </div>
 
@@ -39,18 +57,27 @@
 
     <div class="court-wrap">
         <svg id="court" viewBox="0 0 500 470" xmlns="http://www.w3.org/2000/svg" aria-label="Shot chart">
-            <rect x="0" y="0" width="500" height="470" fill="none" stroke="var(--border)" stroke-width="2"/>
-            <circle cx="250" cy="417" r="7.5" fill="none" stroke="var(--slate)" stroke-width="2"/>
-            <line x1="220" y1="430" x2="280" y2="430" stroke="var(--slate)" stroke-width="2"/>
-            <rect x="170" y="280" width="160" height="190" fill="none" stroke="var(--slate)" stroke-width="1.5"/>
-            <circle cx="250" cy="280" r="60" fill="none" stroke="var(--slate)" stroke-width="1.5"/>
+            <defs>
+                <radialGradient id="paintGrad" cx="50%" cy="88%" r="60%">
+                    <stop offset="0%" stop-color="#1f262e"/>
+                    <stop offset="100%" stop-color="transparent"/>
+                </radialGradient>
+            </defs>
+            <rect x="0" y="0" width="500" height="470" fill="none" stroke="var(--border-lit)" stroke-width="2" rx="4"/>
+            <rect x="170" y="280" width="160" height="190" fill="url(#paintGrad)" stroke="var(--slate)" stroke-width="1.4"/>
+            <circle cx="250" cy="417" r="7.5" fill="none" stroke="var(--accent)" stroke-width="2"/>
+            <line x1="220" y1="431" x2="280" y2="431" stroke="var(--slate)" stroke-width="2.5"/>
+            <circle cx="250" cy="280" r="60" fill="none" stroke="var(--slate)" stroke-width="1.4"/>
             <path d="M 210 417 A 40 40 0 0 0 290 417" fill="none" stroke="var(--slate)" stroke-width="1.2"/>
-            <line x1="30" y1="470" x2="30" y2="330" stroke="var(--slate)" stroke-width="1.5"/>
-            <line x1="470" y1="470" x2="470" y2="330" stroke="var(--slate)" stroke-width="1.5"/>
-            <path d="M 30 330 A 237 237 0 0 1 470 330" fill="none" stroke="var(--slate)" stroke-width="1.5"/>
+            <line x1="30" y1="470" x2="30" y2="327" stroke="var(--slate)" stroke-width="1.6"/>
+            <line x1="470" y1="470" x2="470" y2="327" stroke="var(--slate)" stroke-width="1.6"/>
+            <path d="M 30 327 A 237.5 237.5 0 0 1 470 327" fill="none" stroke="var(--slate)" stroke-width="1.6"/>
             <g id="dots-layer"></g>
-            <g id="zones-layer" style="display:none;"></g>
         </svg>
+        <div class="court-legend">
+            <span><span class="lg-make"></span> Make</span>
+            <span><span class="lg-miss"></span> Miss</span>
+        </div>
     </div>
 
     <div class="section-label">Shooting Splits <span class="hint">by zone</span></div>
@@ -71,7 +98,7 @@
 
     <div class="section-label">Film <span class="hint">coming soon</span></div>
     <div class="stats-pending">
-        Clips of these shots — filterable by type (pull-up vs. catch-and-shoot) — will play here once the video pipeline is wired in.
+        Clips of these shots — filterable by type, like pull-up versus catch-and-shoot — will play here once the video pipeline is wired in.
     </div>
 
     {{ shot_points|json_script:"shot-data" }}
@@ -84,37 +111,33 @@
             shots.forEach(function (s) {
                 var cx = 250 + s.x;
                 var cy = 417 - s.y;
-                if (cx < 0 || cx > 500 || cy < 0 || cy > 470) return;
+                if (cx < 2 || cx > 498 || cy < 2 || cy > 468) return;
                 var c = document.createElementNS(svgNS, 'circle');
                 c.setAttribute('cx', cx);
                 c.setAttribute('cy', cy);
-                c.setAttribute('r', s.made ? 3.2 : 3);
                 if (s.made) {
-                    c.setAttribute('fill', 'var(--accent)');
-                    c.setAttribute('fill-opacity', '0.85');
+                    c.setAttribute('r', 3.4);
+                    c.setAttribute('fill', 'var(--make)');
+                    c.setAttribute('fill-opacity', '0.9');
                 } else {
+                    c.setAttribute('r', 3);
                     c.setAttribute('fill', 'none');
-                    c.setAttribute('stroke', 'var(--slate)');
-                    c.setAttribute('stroke-width', '1');
-                    c.setAttribute('stroke-opacity', '0.6');
+                    c.setAttribute('stroke', 'var(--miss)');
+                    c.setAttribute('stroke-width', '1.2');
+                    c.setAttribute('stroke-opacity', '0.7');
                 }
                 dotsLayer.appendChild(c);
             });
 
             var btnDots = document.getElementById('btn-dots');
             var btnZones = document.getElementById('btn-zones');
-            var zonesLayer = document.getElementById('zones-layer');
             btnDots.addEventListener('click', function () {
                 dotsLayer.style.display = '';
-                zonesLayer.style.display = 'none';
-                btnDots.classList.add('active');
-                btnZones.classList.remove('active');
+                btnDots.classList.add('active'); btnZones.classList.remove('active');
             });
             btnZones.addEventListener('click', function () {
                 dotsLayer.style.display = 'none';
-                zonesLayer.style.display = '';
-                btnZones.classList.add('active');
-                btnDots.classList.remove('active');
+                btnZones.classList.add('active'); btnDots.classList.remove('active');
             });
         })();
     </script>
