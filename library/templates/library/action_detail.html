@@ -17,6 +17,11 @@
     <div class="section-label">Breakdown</div>
     <div class="breakdown">{{ action.breakdown|linebreaks }}</div>
 
+    {% if action.key_reads %}
+    <div class="section-label">Key Reads</div>
+    <div class="breakdown">{{ action.key_reads|linebreaks }}</div>
+    {% endif %}
+
     {% if action.play_type_list %}
     <div class="section-label">Related Play Types <span class="hint">Synergy</span></div>
     <div class="playtypes">
@@ -35,7 +40,7 @@
     {% for example in action.examples.all %}
         <div class="example">
             <div class="ex-title">{{ example.title }}{% if example.player %} <span class="ex-player">&mdash; {{ example.player.name }}</span>{% endif %}</div>
-            <a class="ex-link" href="https://www.youtube.com/watch?v={{ example.youtube_id }}&t={{ example.start_seconds }}s" target="_blank" rel="noopener">&#9654; Watch clip &rarr;</a>
+            <a class="ex-link" href="{{ example.watch_url }}" target="_blank" rel="noopener">&#9654; Watch clip &rarr;</a>
             {% if example.note %}<div class="ex-note">{{ example.note }}</div>{% endif %}
         </div>
     {% empty %}
