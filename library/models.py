@@ -3,6 +3,12 @@ from django.urls import reverse
 
 
 class Player(models.Model):
+    @property
+    def headshot_url(self):
+        """Official NBA headshot, keyed by player id. Falls back to None if we have no id."""
+        if not self.nba_api_id:
+            return None
+        return f"https://cdn.nba.com/headshots/nba/latest/1040x760/{self.nba_api_id}.png"
     """A player we can attach film examples to. Thin for now — fleshed out when we wire nba_api."""
     name = models.CharField(max_length=100)
     nba_api_id = models.IntegerField(null=True, blank=True, unique=True)  # e.g. LeBron = 2544; nullable until we backfill
@@ -123,3 +129,52 @@ class Example(models.Model):
     def watch_url(self):
         """Timestamped watch link (used for the link-out until phase-2 on-site clips)."""
         return f"https://www.youtube.com/watch?v={self.youtube_id}&t={self.start_seconds}s"
+
+
+class Shot(models.Model):
+    """
+    A single field-goal attempt, sourced from nba_api ShotChartDetail.
+    Populated by a local/scheduled management command, never fetched live from Render.
+    """
+    player = models.ForeignKey(Player, on_delete=models.CASCADE, related_name="shots")
+
+    # --- Identity / dedup keys ---
+    game_id = models.CharField(max_length=20)
+    game_event_id = models.IntegerField()          # pairs with game_id for VideoEvents clip lookup
+    game_date = models.DateField(null=True, blank=True)
+    season = models.CharField(max_length=9)        # e.g. "2023-24"
+    team_id = models.BigIntegerField(null=True, blank=True)
+
+    # --- Location (for the shot chart) ---
+    loc_x = models.IntegerField()                  # tenths of a foot from hoop, x
+    loc_y = models.IntegerField()                  # tenths of a foot from hoop, y
+    shot_distance = models.IntegerField(null=True, blank=True)
+
+    # --- Outcome ---
+    made = models.BooleanField(default=False)      # from SHOT_MADE_FLAG
+    shot_value = models.IntegerField(default=2)    # 2 or 3, derived from SHOT_TYPE
+
+    # --- Type / classification (raw material for pull-up vs C&S later) ---
+    action_type = models.CharField(max_length=60, blank=True)   # e.g. "Pullup Jump Shot"
+    shot_type = models.CharField(max_length=20, blank=True)     # "2PT Field Goal" / "3PT Field Goal"
+    zone_basic = models.CharField(max_length=40, blank=True)    # SHOT_ZONE_BASIC
+    zone_range = models.CharField(max_length=40, blank=True)    # SHOT_ZONE_RANGE
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=["game_id", "game_event_id"], name="unique_shot_per_game_event")
+        ]
+        indexes = [
+            models.Index(fields=["player", "season"]),
+            models.Index(fields=["action_type"]),
+        ]
+        ordering = ["-game_date"]
+
+    def __str__(self):
+        result = "MAKE" if self.made else "MISS"
+        return f"{self.player.name} {self.shot_value}PT {result} ({self.game_date})"
+
+    @property
+    def has_video(self):
+        """We can attempt a VideoEvents clip lookup for any shot with a game/event id."""
+        return bool(self.game_id and self.game_event_id is not None)

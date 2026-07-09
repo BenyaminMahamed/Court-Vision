@@ -1,0 +1,25 @@
+{% extends "library/base.html" %}
+
+{% block title %}Players — Court Vision{% endblock %}
+
+{% block content %}
+    <p class="eyebrow">Player Index</p>
+    <h1 class="page-title">Players</h1>
+    <p class="lede">Shot charts and shooting splits, pulled from NBA shot data. Click a player to see where they score.</p>
+
+    {% if players %}
+        <div class="lib-count">{{ players|length }} player{{ players|length|pluralize }}</div>
+        <div class="action-grid">
+            {% for player in players %}
+                <a class="action-card" href="{% url 'library:player_detail' player.pk %}">
+                    <div class="card-cat">{% if player.team %}{{ player.team }}{% else %}NBA{% endif %}</div>
+                    <div class="card-name">{{ player.name }}</div>
+                    <div class="card-diff">{{ player.shot_count }} shots on file</div>
+                    <div class="card-arrow">View shot chart &rarr;</div>
+                </a>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="empty">No players with shot data yet.</div>
+    {% endif %}
+{% endblock %}

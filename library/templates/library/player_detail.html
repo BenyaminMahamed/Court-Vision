@@ -1,0 +1,121 @@
+{% extends "library/base.html" %}
+{% load static %}
+
+{% block title %}{{ player.name }} — Court Vision{% endblock %}
+
+{% block content %}
+    <a href="{% url 'library:player_list' %}" class="backlink">&larr; Back to players</a>
+
+    <div class="player-header">
+        <div class="ph-text">
+            <p class="eyebrow">Player Profile</p>
+            <h1 class="page-title">{{ player.name }}</h1>
+            <div class="scout-meta">
+                <span class="tag accent">{{ shown_count }} shots</span>
+                <span class="tag">{{ fg_pct }}% FG</span>
+                {% if active_season %}<span class="tag">{{ active_season }}</span>{% else %}<span class="tag">All seasons</span>{% endif %}
+            </div>
+        </div>
+        {% if player.headshot_url %}
+        <img class="player-photo" src="{{ player.headshot_url }}" alt="{{ player.name }}" onerror="this.style.display='none'">
+        {% endif %}
+    </div>
+
+    {% if seasons %}
+    <div class="season-filter">
+        <a href="{% url 'library:player_detail' player.pk %}" class="season-pill {% if not active_season %}active{% endif %}">All</a>
+        {% for s in seasons %}
+            <a href="?season={{ s }}" class="season-pill {% if active_season == s %}active{% endif %}">{{ s }}</a>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <div class="section-label">Shot Chart
+        <span class="chart-toggle">
+            <button id="btn-dots" class="toggle-btn active" type="button">Dots</button>
+            <button id="btn-zones" class="toggle-btn" type="button">Zones</button>
+        </span>
+    </div>
+
+    <div class="court-wrap">
+        <svg id="court" viewBox="0 0 500 470" xmlns="http://www.w3.org/2000/svg" aria-label="Shot chart">
+            <rect x="0" y="0" width="500" height="470" fill="none" stroke="var(--border)" stroke-width="2"/>
+            <circle cx="250" cy="417" r="7.5" fill="none" stroke="var(--slate)" stroke-width="2"/>
+            <line x1="220" y1="430" x2="280" y2="430" stroke="var(--slate)" stroke-width="2"/>
+            <rect x="170" y="280" width="160" height="190" fill="none" stroke="var(--slate)" stroke-width="1.5"/>
+            <circle cx="250" cy="280" r="60" fill="none" stroke="var(--slate)" stroke-width="1.5"/>
+            <path d="M 210 417 A 40 40 0 0 0 290 417" fill="none" stroke="var(--slate)" stroke-width="1.2"/>
+            <line x1="30" y1="470" x2="30" y2="330" stroke="var(--slate)" stroke-width="1.5"/>
+            <line x1="470" y1="470" x2="470" y2="330" stroke="var(--slate)" stroke-width="1.5"/>
+            <path d="M 30 330 A 237 237 0 0 1 470 330" fill="none" stroke="var(--slate)" stroke-width="1.5"/>
+            <g id="dots-layer"></g>
+            <g id="zones-layer" style="display:none;"></g>
+        </svg>
+    </div>
+
+    <div class="section-label">Shooting Splits <span class="hint">by zone</span></div>
+    {% if zone_stats %}
+    <div class="zone-table">
+        {% for z in zone_stats %}
+        <div class="zone-row">
+            <span class="zone-name">{{ z.zone }}</span>
+            <span class="zone-bar-wrap"><span class="zone-bar" style="width: {{ z.pct }}%;"></span></span>
+            <span class="zone-pct">{{ z.pct }}%</span>
+            <span class="zone-att">{{ z.makes }}/{{ z.attempts }}</span>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty">No zone data.</div>
+    {% endif %}
+
+    <div class="section-label">Film <span class="hint">coming soon</span></div>
+    <div class="stats-pending">
+        Clips of these shots — filterable by type (pull-up vs. catch-and-shoot) — will play here once the video pipeline is wired in.
+    </div>
+
+    {{ shot_points|json_script:"shot-data" }}
+    <script>
+        (function () {
+            var shots = JSON.parse(document.getElementById('shot-data').textContent);
+            var dotsLayer = document.getElementById('dots-layer');
+            var svgNS = 'http://www.w3.org/2000/svg';
+
+            shots.forEach(function (s) {
+                var cx = 250 + s.x;
+                var cy = 417 - s.y;
+                if (cx < 0 || cx > 500 || cy < 0 || cy > 470) return;
+                var c = document.createElementNS(svgNS, 'circle');
+                c.setAttribute('cx', cx);
+                c.setAttribute('cy', cy);
+                c.setAttribute('r', s.made ? 3.2 : 3);
+                if (s.made) {
+                    c.setAttribute('fill', 'var(--accent)');
+                    c.setAttribute('fill-opacity', '0.85');
+                } else {
+                    c.setAttribute('fill', 'none');
+                    c.setAttribute('stroke', 'var(--slate)');
+                    c.setAttribute('stroke-width', '1');
+                    c.setAttribute('stroke-opacity', '0.6');
+                }
+                dotsLayer.appendChild(c);
+            });
+
+            var btnDots = document.getElementById('btn-dots');
+            var btnZones = document.getElementById('btn-zones');
+            var zonesLayer = document.getElementById('zones-layer');
+            btnDots.addEventListener('click', function () {
+                dotsLayer.style.display = '';
+                zonesLayer.style.display = 'none';
+                btnDots.classList.add('active');
+                btnZones.classList.remove('active');
+            });
+            btnZones.addEventListener('click', function () {
+                dotsLayer.style.display = 'none';
+                zonesLayer.style.display = '';
+                btnZones.classList.add('active');
+                btnDots.classList.remove('active');
+            });
+        })();
+    </script>
+{% endblock %}
