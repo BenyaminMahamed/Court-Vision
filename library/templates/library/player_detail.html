@@ -56,27 +56,28 @@
     </div>
 
     <div class="court-wrap">
-        <svg id="court" viewBox="0 0 500 470" xmlns="http://www.w3.org/2000/svg" aria-label="Shot chart">
+        <svg id="court" viewBox="0 0 500 470" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" aria-label="Shot chart">
             <defs>
                 <radialGradient id="paintGrad" cx="50%" cy="88%" r="60%">
                     <stop offset="0%" stop-color="#1f262e"/>
                     <stop offset="100%" stop-color="transparent"/>
                 </radialGradient>
             </defs>
-            <rect x="0" y="0" width="500" height="470" fill="none" stroke="var(--border-lit)" stroke-width="2" rx="4"/>
-            <rect x="170" y="280" width="160" height="190" fill="url(#paintGrad)" stroke="var(--slate)" stroke-width="1.4"/>
-            <circle cx="250" cy="417" r="7.5" fill="none" stroke="var(--accent)" stroke-width="2"/>
-            <line x1="220" y1="431" x2="280" y2="431" stroke="var(--slate)" stroke-width="2.5"/>
-            <circle cx="250" cy="280" r="60" fill="none" stroke="var(--slate)" stroke-width="1.4"/>
-            <path d="M 210 417 A 40 40 0 0 0 290 417" fill="none" stroke="var(--slate)" stroke-width="1.2"/>
-            <line x1="30" y1="470" x2="30" y2="327" stroke="var(--slate)" stroke-width="1.6"/>
-            <line x1="470" y1="470" x2="470" y2="327" stroke="var(--slate)" stroke-width="1.6"/>
-            <path d="M 30 327 A 237.5 237.5 0 0 1 470 327" fill="none" stroke="var(--slate)" stroke-width="1.6"/>
+            <rect x="0" y="0" width="500" height="470" fill="none" stroke="#37404B" stroke-width="2" rx="4"/>
+            <rect x="170" y="280" width="160" height="190" fill="url(#paintGrad)" stroke="#5A6472" stroke-width="1.4"/>
+            <circle cx="250" cy="417" r="7.5" fill="none" stroke="#F0702F" stroke-width="2"/>
+            <line x1="220" y1="431" x2="280" y2="431" stroke="#5A6472" stroke-width="2.5"/>
+            <circle cx="250" cy="280" r="60" fill="none" stroke="#5A6472" stroke-width="1.4"/>
+            <path d="M 210 417 A 40 40 0 0 0 290 417" fill="none" stroke="#5A6472" stroke-width="1.2"/>
+            <line x1="30" y1="470" x2="30" y2="327" stroke="#5A6472" stroke-width="1.6"/>
+            <line x1="470" y1="470" x2="470" y2="327" stroke="#5A6472" stroke-width="1.6"/>
+            <path d="M 30 327 A 237.5 237.5 0 0 1 470 327" fill="none" stroke="#5A6472" stroke-width="1.6"/>
             <g id="dots-layer"></g>
         </svg>
         <div class="court-legend">
             <span><span class="lg-make"></span> Make</span>
             <span><span class="lg-miss"></span> Miss</span>
+            <span style="margin-left:auto; color: var(--slate);">Click a shot to watch it &rarr;</span>
         </div>
     </div>
 
@@ -107,26 +108,50 @@
             var shots = JSON.parse(document.getElementById('shot-data').textContent);
             var dotsLayer = document.getElementById('dots-layer');
             var svgNS = 'http://www.w3.org/2000/svg';
+            var xlink = 'http://www.w3.org/1999/xlink';
 
             shots.forEach(function (s) {
                 var cx = 250 + s.x;
                 var cy = 417 - s.y;
                 if (cx < 2 || cx > 498 || cy < 2 || cy > 468) return;
+
                 var c = document.createElementNS(svgNS, 'circle');
                 c.setAttribute('cx', cx);
                 c.setAttribute('cy', cy);
                 if (s.made) {
                     c.setAttribute('r', 3.4);
-                    c.setAttribute('fill', 'var(--make)');
+                    c.setAttribute('fill', '#F0702F');
                     c.setAttribute('fill-opacity', '0.9');
                 } else {
                     c.setAttribute('r', 3);
                     c.setAttribute('fill', 'none');
-                    c.setAttribute('stroke', 'var(--miss)');
+                    c.setAttribute('stroke', '#6B7685');
                     c.setAttribute('stroke-width', '1.2');
                     c.setAttribute('stroke-opacity', '0.7');
                 }
-                dotsLayer.appendChild(c);
+
+                if (s.gid && s.eid != null && s.season) {
+                    var url = 'https://www.nba.com/stats/events/?GameEventID=' + s.eid +
+                              '&GameID=' + s.gid + '&Season=' + s.season + '&flag=1&sct=plot';
+                    var a = document.createElementNS(svgNS, 'a');
+                    a.setAttributeNS(xlink, 'href', url);
+                    a.setAttribute('href', url);
+                    a.setAttribute('target', '_blank');
+                    a.setAttribute('rel', 'noopener');
+                    a.style.cursor = 'pointer';
+
+                    var hit = document.createElementNS(svgNS, 'circle');
+                    hit.setAttribute('cx', cx);
+                    hit.setAttribute('cy', cy);
+                    hit.setAttribute('r', 8);
+                    hit.setAttribute('fill', 'transparent');
+
+                    a.appendChild(hit);
+                    a.appendChild(c);
+                    dotsLayer.appendChild(a);
+                } else {
+                    dotsLayer.appendChild(c);
+                }
             });
 
             var btnDots = document.getElementById('btn-dots');
