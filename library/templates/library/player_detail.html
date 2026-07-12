@@ -41,9 +41,18 @@
 
     {% if seasons %}
     <div class="season-filter">
-        <a href="{% url 'library:player_detail' player.pk %}" class="season-pill {% if not active_season %}active{% endif %}">All</a>
-        {% for s in seasons %}
-            <a href="?season={{ s }}" class="season-pill {% if active_season == s %}active{% endif %}">{{ s }}</a>
+        <a href="{{ all_seasons_url }}" class="season-pill {% if not active_season %}active{% endif %}">All</a>
+        {% for s in season_pills %}
+            <a href="{{ s.url }}" class="season-pill {% if s.active %}active{% endif %}">{{ s.value }}</a>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    {% if shot_types %}
+    <div class="season-filter">
+        <a href="{{ all_types_url }}" class="season-pill {% if not active_type %}active{% endif %}">All shot types</a>
+        {% for t in shot_types %}
+            <a href="{{ t.url }}" class="season-pill {% if t.active %}active{% endif %}">{{ t.label }} ({{ t.count }})</a>
         {% endfor %}
     </div>
     {% endif %}
@@ -99,7 +108,7 @@
 
     <div class="section-label">Film <span class="hint">coming soon</span></div>
     <div class="stats-pending">
-        Clips of these shots — filterable by type, like pull-up versus catch-and-shoot — will play here once the video pipeline is wired in.
+        In-page clips of these shots, filterable by type like the chart above, will play here once the video pipeline is wired in. Until then, click any shot on the chart to watch it on NBA.com.
     </div>
 
     {{ shot_points|json_script:"shot-data" }}
