@@ -40,10 +40,90 @@
     {% for example in action.examples.all %}
         <div class="example">
             <div class="ex-title">{{ example.title }}{% if example.player %} <span class="ex-player">&mdash; {{ example.player.name }}</span>{% endif %}</div>
-            <a class="ex-link" href="{{ example.watch_url }}" target="_blank" rel="noopener">&#9654; Watch clip &rarr;</a>
+
+            <div class="ex-watch-card"
+                 data-video-id="{{ example.youtube_id }}"
+                 data-start="{{ example.start_seconds|default:0 }}"
+                 {% if example.end_seconds %}data-end="{{ example.end_seconds }}"{% endif %}
+                 data-watch-url="{{ example.watch_url }}"
+                 role="button" tabindex="0" aria-label="Play {{ example.title }}">
+                <img class="ex-thumb" src="https://img.youtube.com/vi/{{ example.youtube_id }}/hqdefault.jpg" alt="" loading="lazy">
+                <span class="ex-play-btn" aria-hidden="true">&#9658;</span>
+            </div>
+
+            <a class="ex-link" href="{{ example.watch_url }}" target="_blank" rel="noopener">Open on YouTube &rarr;</a>
             {% if example.note %}<div class="ex-note">{{ example.note }}</div>{% endif %}
         </div>
     {% empty %}
         <div class="empty">No film examples yet.</div>
     {% endfor %}
+
+    <script>
+        // Thumbnails (img.youtube.com) are a plain public image with no embed-
+        // permission check, so the card always looks correct up front — even
+        // for the many official NBA/team-channel clips that have embedding
+        // disabled by the uploader. We only find out whether THIS specific
+        // clip can be embedded after a real click, and only load the YouTube
+        // IFrame API at that point (once, lazily) rather than for every clip
+        // on page load. If the player then reports an error (101/150 =
+        // embedding disabled, 100 = removed/private), we just open the clip
+        // on YouTube in a new tab instead — the same place "Open on YouTube"
+        // already sends people, so nothing feels broken.
+        (function () {
+            var apiLoading = false;
+            var pendingCard = null;
+
+            function playInline(card) {
+                var videoId = card.dataset.videoId;
+                var watchUrl = card.dataset.watchUrl;
+                var mountId = 'yt-inline-' + videoId + '-' + Math.random().toString(36).slice(2, 7);
+
+                card.innerHTML = '';
+                card.classList.add('is-playing');
+                var mount = document.createElement('div');
+                mount.id = mountId;
+                card.appendChild(mount);
+
+                var playerVars = { start: parseInt(card.dataset.start, 10) || 0, autoplay: 1, rel: 0, modestbranding: 1 };
+                if (card.dataset.end) { playerVars.end = parseInt(card.dataset.end, 10); }
+
+                new YT.Player(mountId, {
+                    videoId: videoId,
+                    playerVars: playerVars,
+                    events: {
+                        onError: function (e) {
+                            if ([100, 101, 150].indexOf(e.data) !== -1) {
+                                window.open(watchUrl, '_blank', 'noopener');
+                            }
+                        }
+                    }
+                });
+            }
+
+            function handleActivate(card) {
+                if (window.YT && window.YT.Player) {
+                    playInline(card);
+                    return;
+                }
+                pendingCard = card;
+                if (!apiLoading) {
+                    apiLoading = true;
+                    var tag = document.createElement('script');
+                    tag.src = 'https://www.youtube.com/iframe_api';
+                    document.body.appendChild(tag);
+                }
+            }
+
+            window.onYouTubeIframeAPIReady = function () {
+                if (pendingCard) { playInline(pendingCard); pendingCard = null; }
+            };
+
+            document.querySelectorAll('.ex-watch-card').forEach(function (card) {
+                card.addEventListener('click', function () { handleActivate(card); });
+                card.addEventListener('keydown', function (e) {
+                    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleActivate(card); }
+                });
+            });
+        })();
+    </script>
 {% endblock %}
