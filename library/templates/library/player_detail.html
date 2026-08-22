@@ -65,28 +65,11 @@
     </div>
 
     <div class="court-wrap">
-        <svg id="court" viewBox="0 0 500 470" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" aria-label="Shot chart">
-            <defs>
-                <radialGradient id="paintGrad" cx="50%" cy="88%" r="60%">
-                    <stop offset="0%" stop-color="#1f262e"/>
-                    <stop offset="100%" stop-color="transparent"/>
-                </radialGradient>
-            </defs>
-            <rect x="0" y="0" width="500" height="470" fill="none" stroke="#37404B" stroke-width="2" rx="4"/>
-            <rect x="170" y="280" width="160" height="190" fill="url(#paintGrad)" stroke="#5A6472" stroke-width="1.4"/>
-            <circle cx="250" cy="417" r="7.5" fill="none" stroke="#F0702F" stroke-width="2"/>
-            <line x1="220" y1="431" x2="280" y2="431" stroke="#5A6472" stroke-width="2.5"/>
-            <circle cx="250" cy="280" r="60" fill="none" stroke="#5A6472" stroke-width="1.4"/>
-            <path d="M 210 417 A 40 40 0 0 0 290 417" fill="none" stroke="#5A6472" stroke-width="1.2"/>
-            <line x1="30" y1="470" x2="30" y2="327" stroke="#5A6472" stroke-width="1.6"/>
-            <line x1="470" y1="470" x2="470" y2="327" stroke="#5A6472" stroke-width="1.6"/>
-            <path d="M 30 327 A 237.5 237.5 0 0 1 470 327" fill="none" stroke="#5A6472" stroke-width="1.6"/>
-            <g id="dots-layer"></g>
-        </svg>
+        <div id="chart-mount"></div>
         <div class="court-legend">
             <span><span class="lg-make"></span> Make</span>
             <span><span class="lg-miss"></span> Miss</span>
-            <span style="margin-left:auto; color: var(--slate);">Click a shot to watch it &rarr;</span>
+            <span id="chart-hint" style="margin-left:auto; color: var(--slate);">Click a shot to watch it &rarr;</span>
         </div>
     </div>
 
@@ -112,23 +95,33 @@
     </div>
 
     {{ shot_points|json_script:"shot-data" }}
+    {{ zone_stats|json_script:"zone-data" }}
     <script src="{% static 'library/court-chart.js' %}"></script>
     <script>
         (function () {
             var shots = JSON.parse(document.getElementById('shot-data').textContent);
-            var dotsLayer = document.getElementById('dots-layer');
-            renderCourtShots(shots, dotsLayer);
+            var zoneStats = JSON.parse(document.getElementById('zone-data').textContent);
+            var mount = document.getElementById('chart-mount');
+            var hint = document.getElementById('chart-hint');
 
             var btnDots = document.getElementById('btn-dots');
             var btnZones = document.getElementById('btn-zones');
-            btnDots.addEventListener('click', function () {
-                dotsLayer.style.display = '';
+
+            function showDots() {
+                CourtChart.render(mount, shots, { id: 'player-chart' });
+                hint.textContent = 'Click a shot to watch it \u2192';
                 btnDots.classList.add('active'); btnZones.classList.remove('active');
-            });
-            btnZones.addEventListener('click', function () {
-                dotsLayer.style.display = 'none';
+            }
+            function showZones() {
+                CourtChart.renderZones(mount, zoneStats, { id: 'player-chart' });
+                hint.textContent = 'Colored by field goal % \u2014 orange is hot, slate is cold';
                 btnZones.classList.add('active'); btnDots.classList.remove('active');
-            });
+            }
+
+            btnDots.addEventListener('click', showDots);
+            btnZones.addEventListener('click', showZones);
+
+            showDots();
         })();
     </script>
 {% endblock %}
