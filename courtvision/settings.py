@@ -42,8 +42,21 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'rest_framework',
     'library',
 ]
+
+REST_FRAMEWORK = {
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+    'PAGE_SIZE': 100,
+    # Browsable API in DEBUG (handy for manual poking locally); JSON-only in
+    # production so the API doesn't ship the DRF UI's CSS/JS to real users.
+    'DEFAULT_RENDERER_CLASSES': (
+        ['rest_framework.renderers.JSONRenderer', 'rest_framework.renderers.BrowsableAPIRenderer']
+        if os.environ.get("DEBUG", "False") == "True"
+        else ['rest_framework.renderers.JSONRenderer']
+    ),
+}
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',

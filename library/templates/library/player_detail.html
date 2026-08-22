@@ -112,56 +112,12 @@
     </div>
 
     {{ shot_points|json_script:"shot-data" }}
+    <script src="{% static 'library/court-chart.js' %}"></script>
     <script>
         (function () {
             var shots = JSON.parse(document.getElementById('shot-data').textContent);
             var dotsLayer = document.getElementById('dots-layer');
-            var svgNS = 'http://www.w3.org/2000/svg';
-            var xlink = 'http://www.w3.org/1999/xlink';
-
-            shots.forEach(function (s) {
-                var cx = 250 + s.x;
-                var cy = 417 - s.y;
-                if (cx < 2 || cx > 498 || cy < 2 || cy > 468) return;
-
-                var c = document.createElementNS(svgNS, 'circle');
-                c.setAttribute('cx', cx);
-                c.setAttribute('cy', cy);
-                if (s.made) {
-                    c.setAttribute('r', 3.4);
-                    c.setAttribute('fill', '#F0702F');
-                    c.setAttribute('fill-opacity', '0.9');
-                } else {
-                    c.setAttribute('r', 3);
-                    c.setAttribute('fill', 'none');
-                    c.setAttribute('stroke', '#6B7685');
-                    c.setAttribute('stroke-width', '1.2');
-                    c.setAttribute('stroke-opacity', '0.7');
-                }
-
-                if (s.gid && s.eid != null && s.season) {
-                    var url = 'https://www.nba.com/stats/events/?GameEventID=' + s.eid +
-                              '&GameID=' + s.gid + '&Season=' + s.season + '&flag=1&sct=plot';
-                    var a = document.createElementNS(svgNS, 'a');
-                    a.setAttributeNS(xlink, 'href', url);
-                    a.setAttribute('href', url);
-                    a.setAttribute('target', '_blank');
-                    a.setAttribute('rel', 'noopener');
-                    a.style.cursor = 'pointer';
-
-                    var hit = document.createElementNS(svgNS, 'circle');
-                    hit.setAttribute('cx', cx);
-                    hit.setAttribute('cy', cy);
-                    hit.setAttribute('r', 8);
-                    hit.setAttribute('fill', 'transparent');
-
-                    a.appendChild(hit);
-                    a.appendChild(c);
-                    dotsLayer.appendChild(a);
-                } else {
-                    dotsLayer.appendChild(c);
-                }
-            });
+            renderCourtShots(shots, dotsLayer);
 
             var btnDots = document.getElementById('btn-dots');
             var btnZones = document.getElementById('btn-zones');

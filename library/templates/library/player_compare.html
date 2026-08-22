@@ -1,0 +1,196 @@
+﻿{% extends "library/base.html" %}
+{% load static %}
+
+{% block title %}Compare Players — Court Vision{% endblock %}
+
+{% block content %}
+<a href="{% url 'library:player_list' %}" class="backlink">&larr; Back to players</a>
+
+<p class="eyebrow">Head to Head</p>
+<h1 class="page-title">Compare</h1>
+
+<style>
+    .compare-picker { display: flex; align-items: center; gap: 14px; margin-top: 26px; flex-wrap: wrap; }
+    .compare-picker select {
+        background: var(--surface); color: var(--text); border: 1px solid var(--border);
+        border-radius: 8px; padding: 10px 14px; font-family: var(--body); font-size: 14px; min-width: 220px;
+    }
+    .compare-vs { font-family: var(--display); font-weight: 700; color: var(--slate); text-transform: uppercase; letter-spacing: 0.08em; }
+    .compare-btn {
+        font-family: var(--mono); font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em;
+        background: var(--accent); color: var(--base); border: none; border-radius: 6px; padding: 11px 20px;
+        cursor: pointer; transition: opacity 0.15s;
+    }
+    .compare-btn:hover { opacity: 0.88; }
+    .compare-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+    .compare-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; margin-top: 30px; }
+    @media (max-width: 760px) { .compare-grid { grid-template-columns: 1fr; } }
+    .compare-col .player-name-lg { font-family: var(--display); font-weight: 700; font-size: 24px; text-transform: uppercase; margin-bottom: 4px; }
+    .compare-col .stat-strip { grid-template-columns: repeat(3, 1fr); margin-top: 14px; }
+    .zone-vs-table { display: flex; flex-direction: column; gap: 8px; margin-top: 18px; }
+    .zone-vs-row { display: grid; grid-template-columns: 1fr 90px 1fr; align-items: center; gap: 14px; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 13px 18px; }
+    .zone-vs-side { font-family: var(--display); font-weight: 700; font-size: 18px; text-align: center; color: var(--text); }
+    .zone-vs-side.winner { color: var(--accent); }
+    .zone-vs-name { font-family: var(--mono); font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); text-align: center; }
+    .compare-empty { border: 1px dashed var(--border-lit); border-radius: 10px; padding: 44px; text-align: center; color: var(--muted); margin-top: 26px; }
+    .loading-hint { font-family: var(--mono); font-size: 11px; color: var(--slate); text-transform: uppercase; letter-spacing: 0.08em; margin-top: 20px; }
+</style>
+
+<div class="compare-picker">
+    <select id="player-a">
+        <option value="">Select a player&hellip;</option>
+        {% for p in players %}
+        <option value="{{ p.id }}">{{ p.name }}</option>
+        {% endfor %}
+    </select>
+    <span class="compare-vs">vs</span>
+    <select id="player-b">
+        <option value="">Select a player&hellip;</option>
+        {% for p in players %}
+        <option value="{{ p.id }}">{{ p.name }}</option>
+        {% endfor %}
+    </select>
+    <button id="btn-compare" class="compare-btn" type="button">Compare</button>
+</div>
+
+<div id="loading-hint" class="loading-hint" style="display:none;">Loading shot data&hellip;</div>
+<div id="compare-empty" class="compare-empty">Pick two players above to see a side-by-side shot chart and zone breakdown.</div>
+
+<div id="compare-results" style="display:none;">
+    <div class="compare-grid">
+        <div class="compare-col">
+            <div class="player-name-lg" id="name-a"></div>
+            <div class="stat-strip">
+                <div class="stat-box"><div class="sb-val" id="shots-a"></div><div class="sb-label">Shots</div></div>
+                <div class="stat-box"><div class="sb-val accent" id="pct-a"></div><div class="sb-label">Field Goal %</div></div>
+                <div class="stat-box"><div class="sb-val" id="made-a"></div><div class="sb-label">Made</div></div>
+            </div>
+            <div class="court-wrap"><div id="chart-a"></div></div>
+        </div>
+        <div class="compare-col">
+            <div class="player-name-lg" id="name-b"></div>
+            <div class="stat-strip">
+                <div class="stat-box"><div class="sb-val" id="shots-b"></div><div class="sb-label">Shots</div></div>
+                <div class="stat-box"><div class="sb-val accent" id="pct-b"></div><div class="sb-label">Field Goal %</div></div>
+                <div class="stat-box"><div class="sb-val" id="made-b"></div><div class="sb-label">Made</div></div>
+            </div>
+            <div class="court-wrap"><div id="chart-b"></div></div>
+        </div>
+    </div>
+
+    <div class="section-label">Zone Head-to-Head <span class="hint">bold = better FG%</span></div>
+    <div class="zone-vs-table" id="zone-vs-table"></div>
+</div>
+
+<script src="{% static 'library/court-chart.js' %}"></script>
+<script>
+(function () {
+    var initialA = "{{ initial_a }}";
+    var initialB = "{{ initial_b }}";
+
+    var selA = document.getElementById('player-a');
+    var selB = document.getElementById('player-b');
+    var btn = document.getElementById('btn-compare');
+    var loadingHint = document.getElementById('loading-hint');
+    var emptyState = document.getElementById('compare-empty');
+    var results = document.getElementById('compare-results');
+
+    if (initialA) selA.value = initialA;
+    if (initialB) selB.value = initialB;
+
+    function apiUrl(id) {
+        return '/api/players/' + id + '/shotchart/';
+    }
+
+    function fillSide(suffix, data) {
+        document.getElementById('name-' + suffix).textContent = data.player.name;
+        document.getElementById('shots-' + suffix).textContent = data.total;
+        document.getElementById('pct-' + suffix).textContent = data.fg_pct + '%';
+        document.getElementById('made-' + suffix).textContent = data.made;
+        window.CourtChart.render(document.getElementById('chart-' + suffix), data.shot_points, { id: 'chart-' + suffix });
+    }
+
+    function zoneMap(zoneStats) {
+        var map = {};
+        zoneStats.forEach(function (z) { map[z.zone] = z; });
+        return map;
+    }
+
+    function renderZoneTable(dataA, dataB) {
+        var table = document.getElementById('zone-vs-table');
+        table.innerHTML = '';
+        var mapA = zoneMap(dataA.zone_stats);
+        var mapB = zoneMap(dataB.zone_stats);
+        var zoneNames = Object.keys(mapA).concat(Object.keys(mapB).filter(function (z) { return !(z in mapA); }));
+
+        zoneNames.forEach(function (zone) {
+            var za = mapA[zone];
+            var zb = mapB[zone];
+            var pctA = za ? za.pct : null;
+            var pctB = zb ? zb.pct : null;
+
+            var row = document.createElement('div');
+            row.className = 'zone-vs-row';
+
+            var sideA = document.createElement('div');
+            sideA.className = 'zone-vs-side' + (pctA !== null && (pctB === null || pctA > pctB) ? ' winner' : '');
+            sideA.textContent = za ? (za.pct + '% (' + za.makes + '/' + za.attempts + ')') : '\u2014';
+
+            var name = document.createElement('div');
+            name.className = 'zone-vs-name';
+            name.textContent = zone;
+
+            var sideB = document.createElement('div');
+            sideB.className = 'zone-vs-side' + (pctB !== null && (pctA === null || pctB > pctA) ? ' winner' : '');
+            sideB.textContent = zb ? (zb.pct + '% (' + zb.makes + '/' + zb.attempts + ')') : '\u2014';
+
+            row.appendChild(sideA);
+            row.appendChild(name);
+            row.appendChild(sideB);
+            table.appendChild(row);
+        });
+    }
+
+    function updateUrl(idA, idB) {
+        var url = new URL(window.location.href);
+        url.searchParams.set('a', idA);
+        url.searchParams.set('b', idB);
+        window.history.replaceState({}, '', url);
+    }
+
+    function runCompare() {
+        var idA = selA.value, idB = selB.value;
+        if (!idA || !idB) return;
+
+        btn.disabled = true;
+        loadingHint.style.display = '';
+        emptyState.style.display = 'none';
+        results.style.display = 'none';
+
+        Promise.all([
+            fetch(apiUrl(idA)).then(function (r) { return r.json(); }),
+            fetch(apiUrl(idB)).then(function (r) { return r.json(); })
+        ]).then(function (pair) {
+            var dataA = pair[0], dataB = pair[1];
+            fillSide('a', dataA);
+            fillSide('b', dataB);
+            renderZoneTable(dataA, dataB);
+            updateUrl(idA, idB);
+            results.style.display = '';
+        }).catch(function () {
+            emptyState.textContent = 'Something went wrong loading that comparison. Try again.';
+            emptyState.style.display = '';
+        }).finally(function () {
+            btn.disabled = false;
+            loadingHint.style.display = 'none';
+        });
+    }
+
+    btn.addEventListener('click', runCompare);
+
+    if (initialA && initialB) {
+        runCompare();
+    }
+})();
+</script>
+{% endblock %}
