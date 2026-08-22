@@ -1,4 +1,4 @@
-from django.shortcuts import render, get_object_or_404
+﻿from django.shortcuts import render, get_object_or_404
 from django.db.models import Count
 from .models import Action, Player, Shot
 from .queries import get_player_shot_data
@@ -46,44 +46,20 @@ def player_detail(request, pk):
 
     season = request.GET.get("season")
     shot_type = request.GET.get("type")
-    shots, meta = get_player_shot_data(player, season=season, shot_type=shot_type)
 
-    # Shot points for the chart — includes game/event/season for the NBA clip link
-    shot_points = [
-        {
-            "x": s.loc_x, "y": s.loc_y, "made": s.made, "v": s.shot_value,
-            "gid": s.game_id, "eid": s.game_event_id, "season": s.season,
-        }
-        for s in shots
-    ]
-
-    season_pills = [
-        {"value": s, "url": _url_with(request, season=s), "active": s == season}
-        for s in meta["seasons"]
-    ]
-    shot_type_pills = [
-        {
-            "key": t["key"], "label": t["label"], "count": t["count"],
-            "url": _url_with(request, type=t["key"]), "active": t["key"] == shot_type,
-        }
-        for t in meta["shot_types"]
-    ]
+    data = get_player_shot_data(
+        player,
+        season=season,
+        shot_type=shot_type,
+        url_for_season=lambda s: _url_with(request, season=s),
+        url_for_type=lambda t: _url_with(request, type=t),
+    )
 
     context = {
         "player": player,
-        "shot_points": shot_points,
-        "zone_stats": meta["zone_stats"],
-        "total": meta["total"],
-        "made": meta["made"],
-        "fg_pct": meta["fg_pct"],
-        "seasons": meta["seasons"],
-        "season_pills": season_pills,
+        **data,
         "all_seasons_url": _url_with(request, season=None),
-        "active_season": season,
-        "shot_types": shot_type_pills,
         "all_types_url": _url_with(request, type=None),
-        "active_type": shot_type,
-        "shown_count": meta["total"],
     }
     return render(request, "library/player_detail.html", context)
 
