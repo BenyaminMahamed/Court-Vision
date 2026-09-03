@@ -1,14 +1,20 @@
 # Court Vision
 
-**Learn to read the game.** A free basketball film-study tool: a searchable library of named actions (pistol, Spain pick-and-roll, horns) with written breakdowns, plus interactive player shot charts where every shot links to its own game film.
+**Learn to read the game.** A free basketball film-study tool: a searchable library of named actions (pistol, Spain pick-and-roll, horns) with written breakdowns, interactive player shot charts where every shot links to its own game film, and head-to-head player comparison.
 
 **Live:** https://court-vision-ng9w.onrender.com
 
 Court Vision exists to solve a specific problem: when you start studying basketball film, you see actions happening but can't name them — and there's no single place to look one up, understand it, and watch how it plays out. Stats sites give you numbers with no film. Film tools like Synergy are paywalled and coach-facing. Court Vision sits in the gap: a free, concept-indexed tool built for people learning to watch the game.
 
+## Screenshot
+
+![Court Vision — interactive shot chart](docs/screenshot-shot-chart.png)
+
+*Interactive shot chart with zone splits, shot-type filtering, and click-to-film. Add your own screenshot at the path above — a shot chart view, a Compare page, and an action library entry are the most useful shots to include.*
+
 ## Status
 
-Live and in active development. Shipped: the **action library** (a scouting-report-style glossary of basketball concepts, now spanning pick-and-roll, off-ball screens, transition, post-up, and isolation) and **player shot charts** — interactive charts, zone splits, and shot-type filtering from real NBA shot data, where clicking any shot opens that exact possession on NBA.com.
+Live and in active development. Shipped: the **action library** (a scouting-report-style glossary of basketball concepts across five categories: Pick and Roll, Off-Ball Screen, Transition, Post-Up, and Isolation), **player shot charts** with shot-type filtering, and **head-to-head player comparison**.
 
 ## Features
 
@@ -17,15 +23,19 @@ Live and in active development. Shipped: the **action library** (a scouting-repo
 - Presented as a structured scouting report: classification tags, breakdown, key reads, related play types, and film examples.
 - Authored through the Django admin, with film examples editable inline.
 - Supports linking variations to a base action (e.g. Pistol Keep to Pistol) and a publish flag for drafting privately.
-- Spans five categories: Pick and Roll, Off-Ball Screen, Transition, Post-Up, and Isolation.
+- 12 actions live, spanning five categories.
 
 ### Player shot charts
-- Browsable player index and per-player profiles with official headshots and shooting summary stats.
+- Browsable index of 50 players (2025–26 season) with official headshots and shooting summary stats.
 - Interactive SVG shot chart rendered from real NBA shot coordinates — makes and misses plotted to scale, with a season filter.
 - **Shot-type filtering** — narrow the chart and zone splits by shot type (Pull-Up, Catch & Shoot, At the Rim, Post & Turnaround), bucketed from each shot's stored `action_type`.
 - **Every shot is clickable and opens that exact possession's video on NBA.com** — turning the shot chart into a portal to game film.
 - Zone-by-zone shooting splits (FG% by court area) computed from the shot data, respecting whatever season/type filters are active.
 - Populated by a local, resumable management command that pulls shot data via `nba_api`, ranks players by shot volume, and caches results into PostgreSQL.
+
+### Head-to-head comparison
+- Select any two of the 50 tracked players for a side-by-side shot chart and zone breakdown.
+- Compares total shots, FG%, and makes for each player, with a zone-by-zone head-to-head table (bolding whichever player shoots better from each zone).
 
 ## Tech stack
 
@@ -71,7 +81,7 @@ python manage.py createsuperuser
 python manage.py runserver
 ```
 
-Visit `/` for the library, `/players/` for shot charts, `/admin/` to add content.
+Visit `/` for the library, `/players/` for shot charts, `/players/compare/` for head-to-head comparison, `/admin/` to add content.
 
 Import shot data locally (writes to whatever `DATABASE_URL` points at):
 
@@ -85,7 +95,7 @@ python manage.py backfill_teams --season 2025-26
 1. **Film examples for the action library** — source and attach real film clips (YouTube ID + timestamp) for every action, especially the newer additions.
 2. **League-relative splits** — compare a player's zone efficiency to league average to surface strengths and weaknesses.
 3. **Zone overlay** — a colored zone view on the shot chart alongside the dot view.
-4. **In-page clip playback** — play shot clips directly on the site instead of linking out to NBA.com, filterable by the same shot types as the chart.
+4. **In-page clip playback** — play shot clips directly on the site instead of linking out to NBA.com, filterable by the same shot types as the chart (currently: "Film coming soon" on player profile pages).
 5. **Play-style recommendation** — a diagnostic quiz mapping answers to play-style axes and recommending actions and players to study.
 
 ## A note on data and media
