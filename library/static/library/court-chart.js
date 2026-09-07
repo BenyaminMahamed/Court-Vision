@@ -88,14 +88,6 @@
         return { svg: svg, dotsLayer: dotsLayer, setShots: setShots };
     }
 
-    // ---- Zone heatmap ----
-    // Court regions matching the zone_basic values nba_api actually returns
-    // (Restricted Area, In The Paint (Non-RA), Mid-Range, Left/Right Corner 3,
-    // Above the Break 3). Geometry derived from the same court markup above:
-    // hoop at (250,417), 3pt arc = circle centered on the hoop with radius
-    // 237.5 (matches the existing static arc path), corner break at y=327.
-    // Shapes use fill-rule="evenodd" with the paint rectangle as a "hole" so
-    // Mid-Range/Above-the-Break don't double-paint over the paint area.
     var ZONE_ORDER = [
         "Above the Break 3", "Mid-Range", "In The Paint (Non-RA)",
         "Restricted Area", "Left Corner 3", "Right Corner 3"
@@ -128,10 +120,6 @@
         }
     };
 
-    // Low FG% -> a cool slate (distinct from pure gray so it still reads as
-    // "cold" rather than just "no fill"); high FG% -> the site's accent orange.
-    // Anything at or above 65% attempts-weighted is treated as max-hot since
-    // few zones realistically exceed that, so the scale doesn't waste its range.
     function zoneColor(pct) {
         var t = Math.max(0, Math.min(1, pct / 65));
         var cold = [58, 90, 120];
@@ -142,17 +130,44 @@
         return "rgb(" + r + "," + g + "," + b + ")";
     }
 
+    function zoneDiffColor(diff) {
+        var t = Math.max(-1, Math.min(1, diff / 12));
+        var neutral = [70, 78, 88];
+        var cold = [58, 90, 120];
+        var hot = [240, 112, 47];
+        var target = t < 0 ? cold : hot;
+        var frac = Math.abs(t);
+        var r = Math.round(neutral[0] + (target[0] - neutral[0]) * frac);
+        var g = Math.round(neutral[1] + (target[1] - neutral[1]) * frac);
+        var b = Math.round(neutral[2] + (target[2] - neutral[2]) * frac);
+        return "rgb(" + r + "," + g + "," + b + ")";
+    }
+
     function renderZones(container, zoneStats, opts) {
         opts = opts || {};
 
         var byZone = {};
         (zoneStats || []).forEach(function (z) { byZone[z.zone] = z; });
 
+        var relativeMode = (zoneStats || []).some(function (z) {
+            return z.diff !== null && z.diff !== undefined;
+        });
+
         var shapesMarkup = ZONE_ORDER.map(function (name) {
             var shape = ZONE_SHAPES[name];
             var z = byZone[name];
-            var fill = z ? zoneColor(z.pct) : "#1B2027";
-            var fillOpacity = z ? "0.92" : "0.4";
+            var fill, fillOpacity;
+            if (!z) {
+                fill = "#1B2027"; fillOpacity = "0.4";
+            } else if (relativeMode) {
+                if (z.diff !== null && z.diff !== undefined) {
+                    fill = zoneDiffColor(z.diff); fillOpacity = "0.92";
+                } else {
+                    fill = "#3A4048"; fillOpacity = "0.55";
+                }
+            } else {
+                fill = zoneColor(z.pct); fillOpacity = "0.92";
+            }
             return "<path d=\"" + shape.path + "\" fill=\"" + fill + "\" fill-opacity=\"" + fillOpacity
                 + "\" fill-rule=\"" + shape.fillRule + "\" stroke=\"#0B0D10\" stroke-width=\"1.5\"></path>";
         }).join("");
@@ -163,9 +178,22 @@
             if (!z) return "";
             var x = shape.label[0], y = shape.label[1];
             var transform = shape.rotate ? " transform=\"rotate(-90 " + x + " " + y + ")\"" : "";
+
+            var mainLabel, subLabel;
+            if (relativeMode && z.diff !== null && z.diff !== undefined) {
+                mainLabel = (z.diff > 0 ? "+" : "") + z.diff + "%";
+                subLabel = z.pct + "% (lg " + z.league_pct + "%)";
+            } else if (relativeMode) {
+                mainLabel = z.pct + "%";
+                subLabel = "n=" + z.attempts + " (low)";
+            } else {
+                mainLabel = z.pct + "%";
+                subLabel = z.makes + "/" + z.attempts;
+            }
+
             return "<g" + transform + " text-anchor=\"middle\">"
-                + "<text x=\"" + x + "\" y=\"" + y + "\" font-family=\"'IBM Plex Mono', monospace\" font-size=\"20\" font-weight=\"700\" fill=\"#ECEAE4\">" + z.pct + "%</text>"
-                + "<text x=\"" + x + "\" y=\"" + (y + 16) + "\" font-family=\"'IBM Plex Mono', monospace\" font-size=\"10\" fill=\"#A8AFB8\">" + z.makes + "/" + z.attempts + "</text>"
+                + "<text x=\"" + x + "\" y=\"" + y + "\" font-family=\"'IBM Plex Mono', monospace\" font-size=\"20\" font-weight=\"700\" fill=\"#ECEAE4\">" + mainLabel + "</text>"
+                + "<text x=\"" + x + "\" y=\"" + (y + 16) + "\" font-family=\"'IBM Plex Mono', monospace\" font-size=\"10\" fill=\"#A8AFB8\">" + subLabel + "</text>"
                 + "</g>";
         }).join("");
 
@@ -181,7 +209,7 @@
             + "</svg>";
 
         container.innerHTML = markup;
-        return { svg: container.querySelector("svg") };
+        return { svg: container.querySelector("svg"), relativeMode: relativeMode };
     }
 
     global.CourtChart = { render: render, renderZones: renderZones };

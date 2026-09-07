@@ -1,5 +1,5 @@
-from django.contrib import admin
-from .models import Player, Action, Example
+﻿from django.contrib import admin
+from .models import Player, Action, Example, LeagueZoneAverage
 
 
 class ExampleInline(admin.TabularInline):
@@ -13,7 +13,7 @@ class ActionAdmin(admin.ModelAdmin):
     list_display = ("name", "category", "difficulty", "created_at")
     list_filter = ("category", "difficulty")
     search_fields = ("name", "aliases")
-    prepopulated_fields = {"slug": ("name",)}  # auto-fills the slug from the name as you type
+    prepopulated_fields = {"slug": ("name",)}
     inlines = [ExampleInline]
 
 
@@ -28,3 +28,9 @@ class ExampleAdmin(admin.ModelAdmin):
     list_display = ("title", "action", "player", "youtube_id")
     list_filter = ("action",)
     search_fields = ("title", "note")
+
+
+@admin.register(LeagueZoneAverage)
+class LeagueZoneAverageAdmin(admin.ModelAdmin):
+    list_display = ("season", "zone_basic", "pct", "makes", "attempts")
+    list_filter = ("season",)

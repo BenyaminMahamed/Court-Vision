@@ -1,5 +1,5 @@
-"""
-Import shots for the most-used players in a season, ordered by total minutes.
+﻿"""
+Import shots for the top scorers in a season, ranked by points per game.
 
 Run LOCALLY only. Resumable: re-run after a timeout/block and it skips
 players already imported for that season.
@@ -7,6 +7,7 @@ players already imported for that season.
 Usage:
     python manage.py import_season --season 2025-26 --limit 50
     python manage.py import_season --season 2025-26 --limit 5      (test run)
+    python manage.py import_season --season 2025-26 --limit 100 --min-gp 10
 """
 
 import time
@@ -17,12 +18,15 @@ from library.models import Player, Shot
 
 
 class Command(BaseCommand):
-    help = "Import shot data for the top-minutes players in a season."
+    help = "Import shot data for the top-scoring (PPG) players in a season."
 
     def add_arguments(self, parser):
         parser.add_argument("--season", required=True, help='e.g. 2025-26')
         parser.add_argument("--limit", type=int, default=50,
-                            help="Import the top N players by minutes (default 50).")
+                            help="Import the top N players by points per game (default 50).")
+        parser.add_argument("--min-gp", type=int, default=15,
+                            help="Exclude players with fewer than this many games played, so a "
+                                 "small-sample hot streak can't outrank a full season (default 15).")
         parser.add_argument("--sleep", type=float, default=1.2,
                             help="Seconds between player API calls (default 1.2).")
 
@@ -34,15 +38,16 @@ class Command(BaseCommand):
 
         season = options["season"]
         limit = options["limit"]
+        min_gp = options["min_gp"]
         sleep_s = options["sleep"]
 
-        # --- 1. Get the season's players ranked by minutes ---
-        self.stdout.write(f"Fetching player minutes leaders for {season} ...")
+        # --- 1. Get the season's players ranked by points per game ---
+        self.stdout.write(f"Fetching PPG leaders for {season} ...")
         try:
             resp = leaguedashplayerstats.LeagueDashPlayerStats(
                 season=season,
                 season_type_all_star="Regular Season",
-                per_mode_detailed="Totals",
+                per_mode_detailed="PerGame",   # PTS column is already points-per-game, no manual division needed
                 timeout=30,
             )
             df = resp.get_data_frames()[0]
@@ -52,25 +57,33 @@ class Command(BaseCommand):
         if df.empty:
             raise CommandError(f"No player stats returned for {season}. Check the season string.")
 
-        # Sort by total minutes, descending, take the top N
-        df = df.sort_values("FGA", ascending=False).head(limit)
-        ranked = [(int(r["PLAYER_ID"]), r["PLAYER_NAME"]) for _, r in df.iterrows()]
+        # Drop small-sample players before ranking, so someone who dropped 40
+        # in their only game of the year doesn't outrank a full-season starter.
+        before = len(df)
+        df = df[df["GP"] >= min_gp]
+        dropped = before - len(df)
+        if dropped:
+            self.stdout.write(f"Excluded {dropped} player(s) with fewer than {min_gp} games played.")
+
+        # Sort by points per game, descending, take the top N
+        df = df.sort_values("PTS", ascending=False).head(limit)
+        ranked = [(int(r["PLAYER_ID"]), r["PLAYER_NAME"], r["PTS"]) for _, r in df.iterrows()]
 
         self.stdout.write(self.style.SUCCESS(
-            f"Top {len(ranked)} players by minutes for {season}. Starting import.\n"
+            f"Top {len(ranked)} players by PPG for {season} (min {min_gp} GP). Starting import.\n"
         ))
 
         total_new = 0
         processed = 0
         skipped = 0
 
-        for nba_id, name in ranked:
+        for nba_id, name, ppg in ranked:
             processed += 1
 
             # Resumability: skip players already imported for this season.
             if Shot.objects.filter(player__nba_api_id=nba_id, season=season).exists():
                 skipped += 1
-                self.stdout.write(f"[{processed}/{len(ranked)}] {name} — already imported, skip.")
+                self.stdout.write(f"[{processed}/{len(ranked)}] {name} ({ppg:.1f} ppg) — already imported, skip.")
                 continue
 
             player_obj, _ = Player.objects.get_or_create(
@@ -88,12 +101,12 @@ class Command(BaseCommand):
                 )
                 shot_df = sc.get_data_frames()[0]
             except Exception as e:
-                self.stdout.write(self.style.ERROR(f"[{processed}/{len(ranked)}] {name} — fetch failed: {e}"))
+                self.stdout.write(self.style.ERROR(f"[{processed}/{len(ranked)}] {name} ({ppg:.1f} ppg) — fetch failed: {e}"))
                 time.sleep(sleep_s)
                 continue
 
             if shot_df.empty:
-                self.stdout.write(f"[{processed}/{len(ranked)}] {name} — no shots.")
+                self.stdout.write(f"[{processed}/{len(ranked)}] {name} ({ppg:.1f} ppg) — no shots.")
                 time.sleep(sleep_s)
                 continue
 
@@ -129,7 +142,7 @@ class Command(BaseCommand):
 
             total_new += new_here
             self.stdout.write(self.style.SUCCESS(
-                f"[{processed}/{len(ranked)}] {name} — {len(shot_df)} shots, {new_here} new."
+                f"[{processed}/{len(ranked)}] {name} ({ppg:.1f} ppg) — {len(shot_df)} shots, {new_here} new."
             ))
             time.sleep(sleep_s)
 

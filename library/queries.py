@@ -6,18 +6,16 @@ totals, zone splits, and a plotted shot list. Both the HTML player_detail
 view and the shotchart API call get_player_shot_data(), so there is
 exactly one place this math happens — not two copies that can quietly
 drift apart.
-
-Bug fixed by this extraction: the old player_detail view computed
-made/fg_pct from the player's *entire* shot history, while shown_count
-respected whatever season/type filter was active. So filtering to one
-season updated the shot count but silently left "Field Goal %" and
-"Made" showing career-wide numbers. Every value returned below is now
-computed from the same, fully-filtered queryset — total, made, fg_pct,
-and shown_count can never disagree again.
 """
 from django.db.models import Count, Q
 
+from .models import LeagueZoneAverage
 from .shot_types import category_expression, CATEGORY_LABELS
+
+# Below this many attempts in a zone, we don't compute a league-average
+# diff for it — a handful of corner-3 attempts reading "+22% vs league"
+# is noise, not signal.
+MIN_ZONE_ATTEMPTS_FOR_COMPARISON = 15
 
 
 def get_player_shot_data(player, season=None, shot_type=None, url_for_season=None, url_for_type=None):
@@ -30,9 +28,9 @@ def get_player_shot_data(player, season=None, shot_type=None, url_for_season=Non
         shot_types, active_type,
         shot_points, zone_stats
 
-    `url_for_season` / `url_for_type` are optional callables (key) -> url
-    used to build filter-pill links for the HTML page. The API doesn't
-    need pill links, so it just omits them.
+    zone_stats entries now also carry `league_pct` and `diff` (player pct
+    minus league pct) when a single season is selected and cached league
+    averages exist for it and the zone; otherwise both are None.
     """
     shots = player.shots.all()
 
@@ -82,17 +80,36 @@ def get_player_shot_data(player, season=None, shot_type=None, url_for_season=Non
         .annotate(attempts=Count("id"), makes=Count("id", filter=Q(made=True)))
         .order_by("-attempts")
     )
+
+    league_lookup = {}
+    if season:
+        league_lookup = {
+            row["zone_basic"]: row
+            for row in LeagueZoneAverage.objects.filter(season=season).values("zone_basic", "attempts", "makes")
+        }
+
     zone_stats = []
     for z in zones:
         if not z["zone_basic"]:
             continue
         att = z["attempts"]
         mk = z["makes"]
+        pct = round(100 * mk / att) if att else 0
+
+        league_pct = None
+        diff = None
+        league_row = league_lookup.get(z["zone_basic"])
+        if league_row and league_row["attempts"] and att >= MIN_ZONE_ATTEMPTS_FOR_COMPARISON:
+            league_pct = round(100 * league_row["makes"] / league_row["attempts"], 1)
+            diff = round(pct - league_pct, 1)
+
         zone_stats.append({
             "zone": z["zone_basic"],
             "attempts": att,
             "makes": mk,
-            "pct": round(100 * mk / att) if att else 0,
+            "pct": pct,
+            "league_pct": league_pct,
+            "diff": diff,
         })
 
     season_pills = []

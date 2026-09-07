@@ -178,3 +178,32 @@ class Shot(models.Model):
     def has_video(self):
         """We can attempt a VideoEvents clip lookup for any shot with a game/event id."""
         return bool(self.game_id and self.game_event_id is not None)
+
+class LeagueZoneAverage(models.Model):
+    """
+    League-wide FG% by zone_basic, for one season — the baseline that a
+    player's own zone_stats gets compared against on the heatmap ("8% above
+    league average from the right corner").
+
+    Populated once per season by `fetch_league_averages`, never fetched
+    live from nba_api on a page request (same reasoning as Shot: stats.nba.com
+    blocks Render's datacenter IPs, and there's no need to re-fetch a number
+    that barely moves within a season).
+    """
+    season = models.CharField(max_length=9)                # e.g. "2023-24"
+    zone_basic = models.CharField(max_length=40)            # SHOT_ZONE_BASIC, matches Shot.zone_basic
+    attempts = models.PositiveIntegerField()
+    makes = models.PositiveIntegerField()
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=["season", "zone_basic"], name="unique_league_zone_avg")
+        ]
+        ordering = ["season", "zone_basic"]
+
+    def __str__(self):
+        return f"{self.season} {self.zone_basic}: {self.pct}%"
+
+    @property
+    def pct(self):
+        return round(100 * self.makes / self.attempts, 1) if self.attempts else 0

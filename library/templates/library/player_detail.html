@@ -1,4 +1,4 @@
-{% extends "library/base.html" %}
+﻿{% extends "library/base.html" %}
 {% load static %}
 
 {% block title %}{{ player.name }} — Court Vision{% endblock %}
@@ -77,13 +77,18 @@
     {% if zone_stats %}
     <div class="zone-table">
         {% for z in zone_stats %}
-        <div class="zone-row">
-            <span class="zone-name">{{ z.zone }}</span>
-            <span class="zone-bar-wrap"><span class="zone-bar" style="width: {{ z.pct }}%;"></span></span>
-            <span class="zone-pct">{{ z.pct }}%</span>
-            <span class="zone-att">{{ z.makes }}/{{ z.attempts }}</span>
-        </div>
-        {% endfor %}
+<div class="zone-row">
+    <span class="zone-name">{{ z.zone }}</span>
+    <span class="zone-bar-wrap"><span class="zone-bar" style="width: {{ z.pct }}%;"></span></span>
+    <span class="zone-pct">{{ z.pct }}%</span>
+    <span class="zone-att">{{ z.makes }}/{{ z.attempts }}</span>
+    {% if z.diff is not None %}
+    <span class="zone-diff {% if z.diff > 0 %}zone-diff-pos{% elif z.diff < 0 %}zone-diff-neg{% else %}zone-diff-flat{% endif %}">
+        {% if z.diff > 0 %}+{% endif %}{{ z.diff }}% vs lg
+    </span>
+    {% endif %}
+</div>
+{% endfor %}
     </div>
     {% else %}
     <div class="empty">No zone data.</div>
@@ -113,8 +118,10 @@
                 btnDots.classList.add('active'); btnZones.classList.remove('active');
             }
             function showZones() {
-                CourtChart.renderZones(mount, zoneStats, { id: 'player-chart' });
-                hint.textContent = 'Colored by field goal % \u2014 orange is hot, slate is cold';
+                var result = CourtChart.renderZones(mount, zoneStats, { id: 'player-chart' });
+                hint.textContent = result.relativeMode
+                    ? 'Colored vs. league average \u2014 orange is above, slate is below'
+                    : 'Colored by field goal % \u2014 orange is hot, slate is cold';
                 btnZones.classList.add('active'); btnDots.classList.remove('active');
             }
 
