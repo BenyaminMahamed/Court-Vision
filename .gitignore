@@ -221,3 +221,4 @@ __marimo__/
 vision/venv/
 vision/data/
 vision/models/*.pt
+vision/**/*.pt
