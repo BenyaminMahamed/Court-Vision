@@ -217,3 +217,7 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+vision/venv/
+vision/data/
+vision/models/*.pt
