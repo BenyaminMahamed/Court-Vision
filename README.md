@@ -6,12 +6,6 @@
 
 Court Vision exists to solve a specific problem: when you start studying basketball film, you see actions happening but can't name them — and there's no single place to look one up, understand it, and watch how it plays out. Stats sites give you numbers with no film. Film tools like Synergy are paywalled and coach-facing. Court Vision sits in the gap: a free, concept-indexed tool built for people learning to watch the game.
 
-## Screenshot
-
-![Court Vision — interactive shot chart](docs/screenshot-shot-chart.png)
-
-*Interactive shot chart with zone splits, shot-type filtering, and click-to-film. Add your own screenshot at the path above — a shot chart view, a Compare page, and an action library entry are the most useful shots to include.*
-
 ## Status
 
 Live and in active development. Shipped: the **action library** (a scouting-report-style glossary of basketball concepts across five categories: Pick and Roll, Off-Ball Screen, Transition, Post-Up, and Isolation), **player shot charts** with shot-type filtering, and **head-to-head player comparison**.
