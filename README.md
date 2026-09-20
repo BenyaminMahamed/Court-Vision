@@ -90,6 +90,25 @@ python manage.py import_season --season 2025-26 --limit 50
 python manage.py backfill_teams --season 2025-26
 ```
 
+## In Progress: Computer Vision Shot-Accuracy Subsystem
+
+A separate, standalone subsystem (`vision/`, isolated from the Django app — no integration yet) aimed at a "shot accuracy" feature: upload a game clip, detect the basketball/rim/backboard, track the ball's trajectory, and calculate how far off-center it crossed the rim plane on a shot attempt — conceptually similar to pitch-command tracking in baseball (target vs. actual location), adapted to basketball.
+
+Calibration is anchored to the rim rather than court lines: rim height (10ft) and diameter (18in) are standardized across NBA, FIBA, and most levels, while court dimensions — the three-point line distance especially — vary. Anchoring to the rim is intended to let this generalize to footage from any court, not just a fixed camera setup.
+
+**Data and training so far:**
+- Baseline test with stock pretrained YOLOv8n (COCO weights, no fine-tuning) found zero basketballs across 15 sampled frames from three test clips — confirming custom training was necessary, not optional.
+- Labeled 640 frames (basketball, rim, backboard classes) across two of the three clips using Roboflow's SAM3-based auto-labeler, 512/64/64 train/validation/test split, 640×640 letterboxed export.
+- Fine-tuned YOLOv8n (from COCO-pretrained weights) locally on an NVIDIA RTX 4070 Laptop GPU, 50 epochs with early stopping. Training required a Python 3.11 environment — Python 3.13 caused an unresolved silent crash in the torch/ultralytics/CUDA stack.
+
+**Current results:**
+- Backboard detection: precision 0.93, recall 0.71, mAP50 0.885.
+- Basketball detection: precision 0.75, recall 0.50, mAP50 0.516 — a large improvement on the zero-detection baseline, but still misses roughly half of real balls in validation.
+- A recurring false-positive basketball detection appears across multiple different clips and venues, ruling out a specific background object as the cause. Current working theory is an artifact of the 640×640 letterbox padding; mitigated for now with a 0.7 confidence threshold at inference time while the root cause is investigated.
+- Tested against a held-out clip (excluded from training entirely, different camera/venue) and correctly detected real basketballs in several frames — an encouraging generalization signal beyond the raw validation numbers.
+
+**Not yet built:** improving basketball detection recall, resolving an observed backboard hoop-side inconsistency, the actual rim-crossing/trajectory math, and Django integration (deliberately last, once the CV pipeline works standalone).
+
 ## Roadmap
 
 1. **Film examples for the action library** — source and attach real film clips (YouTube ID + timestamp) for every action, especially the newer additions.
