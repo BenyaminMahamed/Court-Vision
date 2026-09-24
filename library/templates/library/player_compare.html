@@ -1,196 +1,134 @@
 ﻿{% extends "library/base.html" %}
 {% load static %}
 
-{% block title %}Compare Players — Court Vision{% endblock %}
+{% block title %}{{ player.name }} — Court Vision{% endblock %}
 
 {% block content %}
-<a href="{% url 'library:player_list' %}" class="backlink">&larr; Back to players</a>
+    <a href="{% url 'library:player_list' %}" class="backlink">&larr; Back to players</a>
 
-<p class="eyebrow">Head to Head</p>
-<h1 class="page-title">Compare</h1>
-
-<style>
-    .compare-picker { display: flex; align-items: center; gap: 14px; margin-top: 26px; flex-wrap: wrap; }
-    .compare-picker select {
-        background: var(--surface); color: var(--text); border: 1px solid var(--border);
-        border-radius: 8px; padding: 10px 14px; font-family: var(--body); font-size: 14px; min-width: 220px;
-    }
-    .compare-vs { font-family: var(--display); font-weight: 700; color: var(--slate); text-transform: uppercase; letter-spacing: 0.08em; }
-    .compare-btn {
-        font-family: var(--mono); font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em;
-        background: var(--accent); color: var(--base); border: none; border-radius: 6px; padding: 11px 20px;
-        cursor: pointer; transition: opacity 0.15s;
-    }
-    .compare-btn:hover { opacity: 0.88; }
-    .compare-btn:disabled { opacity: 0.4; cursor: not-allowed; }
-    .compare-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; margin-top: 30px; }
-    @media (max-width: 760px) { .compare-grid { grid-template-columns: 1fr; } }
-    .compare-col .player-name-lg { font-family: var(--display); font-weight: 700; font-size: 24px; text-transform: uppercase; margin-bottom: 4px; }
-    .compare-col .stat-strip { grid-template-columns: repeat(3, 1fr); margin-top: 14px; }
-    .zone-vs-table { display: flex; flex-direction: column; gap: 8px; margin-top: 18px; }
-    .zone-vs-row { display: grid; grid-template-columns: 1fr 90px 1fr; align-items: center; gap: 14px; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 13px 18px; }
-    .zone-vs-side { font-family: var(--display); font-weight: 700; font-size: 18px; text-align: center; color: var(--text); }
-    .zone-vs-side.winner { color: var(--accent); }
-    .zone-vs-name { font-family: var(--mono); font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); text-align: center; }
-    .compare-empty { border: 1px dashed var(--border-lit); border-radius: 10px; padding: 44px; text-align: center; color: var(--muted); margin-top: 26px; }
-    .loading-hint { font-family: var(--mono); font-size: 11px; color: var(--slate); text-transform: uppercase; letter-spacing: 0.08em; margin-top: 20px; }
-</style>
-
-<div class="compare-picker">
-    <select id="player-a">
-        <option value="">Select a player&hellip;</option>
-        {% for p in players %}
-        <option value="{{ p.id }}">{{ p.name }}</option>
-        {% endfor %}
-    </select>
-    <span class="compare-vs">vs</span>
-    <select id="player-b">
-        <option value="">Select a player&hellip;</option>
-        {% for p in players %}
-        <option value="{{ p.id }}">{{ p.name }}</option>
-        {% endfor %}
-    </select>
-    <button id="btn-compare" class="compare-btn" type="button">Compare</button>
-</div>
-
-<div id="loading-hint" class="loading-hint" style="display:none;">Loading shot data&hellip;</div>
-<div id="compare-empty" class="compare-empty">Pick two players above to see a side-by-side shot chart and zone breakdown.</div>
-
-<div id="compare-results" style="display:none;">
-    <div class="compare-grid">
-        <div class="compare-col">
-            <div class="player-name-lg" id="name-a"></div>
-            <div class="stat-strip">
-                <div class="stat-box"><div class="sb-val" id="shots-a"></div><div class="sb-label">Shots</div></div>
-                <div class="stat-box"><div class="sb-val accent" id="pct-a"></div><div class="sb-label">Field Goal %</div></div>
-                <div class="stat-box"><div class="sb-val" id="made-a"></div><div class="sb-label">Made</div></div>
-            </div>
-            <div class="court-wrap"><div id="chart-a"></div></div>
+    <div class="player-header">
+        <div class="ph-text">
+            <p class="eyebrow">Player Profile</p>
+            <h1 class="page-title">{{ player.name }}</h1>
         </div>
-        <div class="compare-col">
-            <div class="player-name-lg" id="name-b"></div>
-            <div class="stat-strip">
-                <div class="stat-box"><div class="sb-val" id="shots-b"></div><div class="sb-label">Shots</div></div>
-                <div class="stat-box"><div class="sb-val accent" id="pct-b"></div><div class="sb-label">Field Goal %</div></div>
-                <div class="stat-box"><div class="sb-val" id="made-b"></div><div class="sb-label">Made</div></div>
-            </div>
-            <div class="court-wrap"><div id="chart-b"></div></div>
+        {% if player.headshot_url %}
+        <div class="player-photo-wrap">
+            <img class="player-photo" src="{{ player.headshot_url }}" alt="{{ player.name }}" onerror="this.parentNode.style.display='none'">
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="stat-strip">
+        <div class="stat-box">
+            <div class="sb-val">{{ shown_count }}</div>
+            <div class="sb-label">Shots</div>
+        </div>
+        <div class="stat-box">
+            <div class="sb-val accent">{{ fg_pct }}%</div>
+            <div class="sb-label">Field Goal %</div>
+        </div>
+        <div class="stat-box">
+            <div class="sb-val">{{ made }}</div>
+            <div class="sb-label">Made</div>
+        </div>
+        {% if player.team %}
+        <div class="stat-box">
+            <div class="sb-val">{{ player.team }}</div>
+            <div class="sb-label">Team</div>
+        </div>
+        {% endif %}
+    </div>
+
+    {% if seasons %}
+    <div class="season-filter">
+        <a href="{{ all_seasons_url }}" class="season-pill {% if not active_season %}active{% endif %}">All</a>
+        {% for s in season_pills %}
+            <a href="{{ s.url }}" class="season-pill {% if s.active %}active{% endif %}">{{ s.value }}</a>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    {% if shot_types %}
+    <div class="season-filter">
+        <a href="{{ all_types_url }}" class="season-pill {% if not active_type %}active{% endif %}">All shot types</a>
+        {% for t in shot_types %}
+            <a href="{{ t.url }}" class="season-pill {% if t.active %}active{% endif %}">{{ t.label }} ({{ t.count }})</a>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <div class="section-label">Shot Chart
+        <span class="chart-toggle">
+            <button id="btn-dots" class="toggle-btn active" type="button">Dots</button>
+            <button id="btn-zones" class="toggle-btn" type="button">Zones</button>
+        </span>
+    </div>
+
+    <div class="court-wrap">
+        <div id="chart-mount"></div>
+        <div class="court-legend">
+            <span><span class="lg-make"></span> Make</span>
+            <span><span class="lg-miss"></span> Miss</span>
+            <span id="chart-hint" style="margin-left:auto; color: var(--slate);">Click a shot to watch it &rarr;</span>
         </div>
     </div>
 
-    <div class="section-label">Zone Head-to-Head <span class="hint">bold = better FG%</span></div>
-    <div class="zone-vs-table" id="zone-vs-table"></div>
+    <div class="section-label">Shooting Splits <span class="hint">by zone</span></div>
+    {% if zone_stats %}
+    <div class="zone-table">
+        {% for z in zone_stats %}
+<div class="zone-row">
+    <span class="zone-name">{{ z.zone }}</span>
+    <span class="zone-bar-wrap"><span class="zone-bar" style="width: {{ z.pct }}%;"></span></span>
+    <span class="zone-pct">{{ z.pct }}%</span>
+    <span class="zone-att">{{ z.makes }}/{{ z.attempts }}</span>
+    {% if z.diff is not None %}
+    <span class="zone-diff {% if z.diff > 0 %}zone-diff-pos{% elif z.diff < 0 %}zone-diff-neg{% else %}zone-diff-flat{% endif %}">
+        {% if z.diff > 0 %}+{% endif %}{{ z.diff }}% vs lg
+    </span>
+    {% endif %}
 </div>
+{% endfor %}
+    </div>
+    {% else %}
+    <div class="empty">No zone data.</div>
+    {% endif %}
 
-<script src="{% static 'library/court-chart.js' %}"></script>
-<script>
-(function () {
-    var initialA = "{{ initial_a }}";
-    var initialB = "{{ initial_b }}";
+    <div class="section-label">Film <span class="hint">coming soon</span></div>
+    <div class="stats-pending">
+        In-page clips of these shots, filterable by type like the chart above, will play here once the video pipeline is wired in. Until then, click any shot on the chart to watch it on NBA.com.
+    </div>
 
-    var selA = document.getElementById('player-a');
-    var selB = document.getElementById('player-b');
-    var btn = document.getElementById('btn-compare');
-    var loadingHint = document.getElementById('loading-hint');
-    var emptyState = document.getElementById('compare-empty');
-    var results = document.getElementById('compare-results');
+    {{ shot_points|json_script:"shot-data" }}
+    {{ zone_stats|json_script:"zone-data" }}
+    <script src="{% static 'library/court-chart.js' %}"></script>
+    <script>
+        (function () {
+            var shots = JSON.parse(document.getElementById('shot-data').textContent);
+            var zoneStats = JSON.parse(document.getElementById('zone-data').textContent);
+            var mount = document.getElementById('chart-mount');
+            var hint = document.getElementById('chart-hint');
 
-    if (initialA) selA.value = initialA;
-    if (initialB) selB.value = initialB;
+            var btnDots = document.getElementById('btn-dots');
+            var btnZones = document.getElementById('btn-zones');
 
-    function apiUrl(id) {
-        return '/api/players/' + id + '/shotchart/';
-    }
+            function showDots() {
+                CourtChart.render(mount, shots, { id: 'player-chart' });
+                hint.textContent = 'Click a shot to watch it \u2192';
+                btnDots.classList.add('active'); btnZones.classList.remove('active');
+            }
+            function showZones() {
+                var result = CourtChart.renderZones(mount, zoneStats, { id: 'player-chart' });
+                hint.textContent = result.relativeMode
+                    ? 'Colored vs. league average \u2014 orange is above, slate is below'
+                    : 'Colored by field goal % \u2014 orange is hot, slate is cold';
+                btnZones.classList.add('active'); btnDots.classList.remove('active');
+            }
 
-    function fillSide(suffix, data) {
-        document.getElementById('name-' + suffix).textContent = data.player.name;
-        document.getElementById('shots-' + suffix).textContent = data.total;
-        document.getElementById('pct-' + suffix).textContent = data.fg_pct + '%';
-        document.getElementById('made-' + suffix).textContent = data.made;
-        window.CourtChart.render(document.getElementById('chart-' + suffix), data.shot_points, { id: 'chart-' + suffix });
-    }
+            btnDots.addEventListener('click', showDots);
+            btnZones.addEventListener('click', showZones);
 
-    function zoneMap(zoneStats) {
-        var map = {};
-        zoneStats.forEach(function (z) { map[z.zone] = z; });
-        return map;
-    }
-
-    function renderZoneTable(dataA, dataB) {
-        var table = document.getElementById('zone-vs-table');
-        table.innerHTML = '';
-        var mapA = zoneMap(dataA.zone_stats);
-        var mapB = zoneMap(dataB.zone_stats);
-        var zoneNames = Object.keys(mapA).concat(Object.keys(mapB).filter(function (z) { return !(z in mapA); }));
-
-        zoneNames.forEach(function (zone) {
-            var za = mapA[zone];
-            var zb = mapB[zone];
-            var pctA = za ? za.pct : null;
-            var pctB = zb ? zb.pct : null;
-
-            var row = document.createElement('div');
-            row.className = 'zone-vs-row';
-
-            var sideA = document.createElement('div');
-            sideA.className = 'zone-vs-side' + (pctA !== null && (pctB === null || pctA > pctB) ? ' winner' : '');
-            sideA.textContent = za ? (za.pct + '% (' + za.makes + '/' + za.attempts + ')') : '\u2014';
-
-            var name = document.createElement('div');
-            name.className = 'zone-vs-name';
-            name.textContent = zone;
-
-            var sideB = document.createElement('div');
-            sideB.className = 'zone-vs-side' + (pctB !== null && (pctA === null || pctB > pctA) ? ' winner' : '');
-            sideB.textContent = zb ? (zb.pct + '% (' + zb.makes + '/' + zb.attempts + ')') : '\u2014';
-
-            row.appendChild(sideA);
-            row.appendChild(name);
-            row.appendChild(sideB);
-            table.appendChild(row);
-        });
-    }
-
-    function updateUrl(idA, idB) {
-        var url = new URL(window.location.href);
-        url.searchParams.set('a', idA);
-        url.searchParams.set('b', idB);
-        window.history.replaceState({}, '', url);
-    }
-
-    function runCompare() {
-        var idA = selA.value, idB = selB.value;
-        if (!idA || !idB) return;
-
-        btn.disabled = true;
-        loadingHint.style.display = '';
-        emptyState.style.display = 'none';
-        results.style.display = 'none';
-
-        Promise.all([
-            fetch(apiUrl(idA)).then(function (r) { return r.json(); }),
-            fetch(apiUrl(idB)).then(function (r) { return r.json(); })
-        ]).then(function (pair) {
-            var dataA = pair[0], dataB = pair[1];
-            fillSide('a', dataA);
-            fillSide('b', dataB);
-            renderZoneTable(dataA, dataB);
-            updateUrl(idA, idB);
-            results.style.display = '';
-        }).catch(function () {
-            emptyState.textContent = 'Something went wrong loading that comparison. Try again.';
-            emptyState.style.display = '';
-        }).finally(function () {
-            btn.disabled = false;
-            loadingHint.style.display = 'none';
-        });
-    }
-
-    btn.addEventListener('click', runCompare);
-
-    if (initialA && initialB) {
-        runCompare();
-    }
-})();
-</script>
+            showDots();
+        })();
+    </script>
 {% endblock %}
