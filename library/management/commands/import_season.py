@@ -83,7 +83,7 @@ class Command(BaseCommand):
             # Resumability: skip players already imported for this season.
             if Shot.objects.filter(player__nba_api_id=nba_id, season=season).exists():
                 skipped += 1
-                self.stdout.write(f"[{processed}/{len(ranked)}] {name} ({ppg:.1f} ppg) — already imported, skip.")
+                self.stdout.write(f"[{processed}/{len(ranked)}] {name} ({ppg:.1f} ppg) -- already imported, skip.")
                 continue
 
             player_obj, _ = Player.objects.get_or_create(
@@ -101,12 +101,12 @@ class Command(BaseCommand):
                 )
                 shot_df = sc.get_data_frames()[0]
             except Exception as e:
-                self.stdout.write(self.style.ERROR(f"[{processed}/{len(ranked)}] {name} ({ppg:.1f} ppg) — fetch failed: {e}"))
+                self.stdout.write(self.style.ERROR(f"[{processed}/{len(ranked)}] {name} ({ppg:.1f} ppg) -- fetch failed: {e}"))
                 time.sleep(sleep_s)
                 continue
 
             if shot_df.empty:
-                self.stdout.write(f"[{processed}/{len(ranked)}] {name} ({ppg:.1f} ppg) — no shots.")
+                self.stdout.write(f"[{processed}/{len(ranked)}] {name} ({ppg:.1f} ppg) -- no shots.")
                 time.sleep(sleep_s)
                 continue
 
@@ -134,6 +134,7 @@ class Command(BaseCommand):
                         "action_type": str(r.get("ACTION_TYPE", ""))[:60],
                         "shot_type": str(r.get("SHOT_TYPE", ""))[:20],
                         "zone_basic": str(r.get("SHOT_ZONE_BASIC", ""))[:40],
+                        "zone_area": str(r.get("SHOT_ZONE_AREA", ""))[:40],
                         "zone_range": str(r.get("SHOT_ZONE_RANGE", ""))[:40],
                     },
                 )
@@ -142,7 +143,7 @@ class Command(BaseCommand):
 
             total_new += new_here
             self.stdout.write(self.style.SUCCESS(
-                f"[{processed}/{len(ranked)}] {name} ({ppg:.1f} ppg) — {len(shot_df)} shots, {new_here} new."
+                f"[{processed}/{len(ranked)}] {name} ({ppg:.1f} ppg) -- {len(shot_df)} shots, {new_here} new."
             ))
             time.sleep(sleep_s)
 

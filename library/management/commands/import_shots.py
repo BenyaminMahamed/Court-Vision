@@ -1,8 +1,8 @@
-"""
+﻿"""
 Management command to import a player's shots from nba_api into the Shot table.
 
 Run LOCALLY only (stats.nba.com blocks Render's datacenter IPs).
-Writes to whatever DATABASE_URL points at — so pointing at Neon locally
+Writes to whatever DATABASE_URL points at -- so pointing at Neon locally
 populates production. Safe to re-run: the unique (game_id, game_event_id)
 constraint means existing shots are skipped, not duplicated.
 
@@ -61,7 +61,7 @@ class Command(BaseCommand):
         total_new = 0
 
         for season in seasons:
-            self.stdout.write(f"\nFetching shots for {full_name} — {season} ...")
+            self.stdout.write(f"\nFetching shots for {full_name} -- {season} ...")
 
             try:
                 resp = shotchartdetail.ShotChartDetail(
@@ -107,6 +107,7 @@ class Command(BaseCommand):
                         "action_type": str(row.get("ACTION_TYPE", ""))[:60],
                         "shot_type": str(row.get("SHOT_TYPE", ""))[:20],
                         "zone_basic": str(row.get("SHOT_ZONE_BASIC", ""))[:40],
+                        "zone_area": str(row.get("SHOT_ZONE_AREA", ""))[:40],
                         "zone_range": str(row.get("SHOT_ZONE_RANGE", ""))[:40],
                     },
                 )

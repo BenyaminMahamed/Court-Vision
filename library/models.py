@@ -1,4 +1,4 @@
-from django.db import models
+﻿from django.db import models
 from django.urls import reverse
 
 
@@ -9,7 +9,7 @@ class Player(models.Model):
         if not self.nba_api_id:
             return None
         return f"https://cdn.nba.com/headshots/nba/latest/1040x760/{self.nba_api_id}.png"
-    """A player we can attach film examples to. Thin for now — fleshed out when we wire nba_api."""
+    """A player we can attach film examples to. Thin for now -- fleshed out when we wire nba_api."""
     name = models.CharField(max_length=100)
     nba_api_id = models.IntegerField(null=True, blank=True, unique=True)  # e.g. LeBron = 2544; nullable until we backfill
     team = models.CharField(max_length=50, blank=True)
@@ -22,7 +22,7 @@ class Player(models.Model):
 
 
 class Action(models.Model):
-    """A named basketball concept/action — the teaching spine. e.g. 'Pistol', 'Spain Pick and Roll'."""
+    """A named basketball concept/action -- the teaching spine. e.g. 'Pistol', 'Spain Pick and Roll'."""
 
     class Category(models.TextChoices):
         PICK_AND_ROLL = "PNR", "Pick and Roll"
@@ -102,7 +102,7 @@ class Action(models.Model):
 
 
 class Example(models.Model):
-    """A single film example of an Action — a trimmed YouTube clip (link for now, embed later)."""
+    """A single film example of an Action -- a trimmed YouTube clip (link for now, embed later)."""
     action = models.ForeignKey(Action, on_delete=models.CASCADE, related_name="examples")
     player = models.ForeignKey(Player, on_delete=models.SET_NULL, null=True, blank=True, related_name="examples")
     title = models.CharField(max_length=200, help_text="e.g. 'LeBron pistol into stepback, 2024 vs BOS'")
@@ -158,6 +158,7 @@ class Shot(models.Model):
     action_type = models.CharField(max_length=60, blank=True)   # e.g. "Pullup Jump Shot"
     shot_type = models.CharField(max_length=20, blank=True)     # "2PT Field Goal" / "3PT Field Goal"
     zone_basic = models.CharField(max_length=40, blank=True)    # SHOT_ZONE_BASIC
+    zone_area = models.CharField(max_length=40, blank=True)     # SHOT_ZONE_AREA (Left Side(L), Center(C), etc.)
     zone_range = models.CharField(max_length=40, blank=True)    # SHOT_ZONE_RANGE
 
     class Meta:
@@ -181,7 +182,7 @@ class Shot(models.Model):
 
 class LeagueZoneAverage(models.Model):
     """
-    League-wide FG% by zone_basic, for one season — the baseline that a
+    League-wide FG% by zone_basic, for one season -- the baseline that a
     player's own zone_stats gets compared against on the heatmap ("8% above
     league average from the right corner").
 
@@ -192,14 +193,15 @@ class LeagueZoneAverage(models.Model):
     """
     season = models.CharField(max_length=9)                # e.g. "2023-24"
     zone_basic = models.CharField(max_length=40)            # SHOT_ZONE_BASIC, matches Shot.zone_basic
+    zone_area = models.CharField(max_length=40, blank=True)  # SHOT_ZONE_AREA; blank for zones we don't split
     attempts = models.PositiveIntegerField()
     makes = models.PositiveIntegerField()
 
     class Meta:
         constraints = [
-            models.UniqueConstraint(fields=["season", "zone_basic"], name="unique_league_zone_avg")
+            models.UniqueConstraint(fields=["season", "zone_basic", "zone_area"], name="unique_league_zone_avg")
         ]
-        ordering = ["season", "zone_basic"]
+        ordering = ["season", "zone_basic", "zone_area"]
 
     def __str__(self):
         return f"{self.season} {self.zone_basic}: {self.pct}%"

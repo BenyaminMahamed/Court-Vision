@@ -1,12 +1,12 @@
 ﻿"""
 Management command to fetch league-wide FG% by shot zone from nba_api and
-cache it locally — the baseline for the "X% above/below league average"
+cache it locally -- the baseline for the "X% above/below league average"
 comparison on player zone heatmaps.
 
 Run LOCALLY only (stats.nba.com blocks Render's datacenter IPs), same as
 import_shots. Uses ShotChartDetail with player_id=0, team_id=0: nba_api
 returns a second dataframe alongside the shot list that's already the
-league-wide breakdown by zone — so this is one request per season, not
+league-wide breakdown by zone -- so this is one request per season, not
 one per player. Safe to re-run: existing rows are updated, not duplicated.
 
 Usage (PowerShell):
@@ -18,6 +18,7 @@ import time
 
 from django.core.management.base import BaseCommand, CommandError
 from library.models import LeagueZoneAverage
+from library.zone_wedges import SPLIT_BASIC_ZONES
 
 
 class Command(BaseCommand):
@@ -57,20 +58,31 @@ class Command(BaseCommand):
                 self.stdout.write(self.style.WARNING(f"  No league data returned for {season}."))
                 continue
 
-            grouped = league_df.groupby("SHOT_ZONE_BASIC")[["FGA", "FGM"]].sum()
+            # NBA's own data tags SHOT_ZONE_AREA on every shot, including
+            # zones we deliberately don't split (Restricted Area, Paint,
+            # both corners). Blank those out here so the grouping key matches
+            # exactly how player shots are keyed (see zone_wedges.combined_zone_key)
+            # -- otherwise the league baseline would be split finer than the
+            # player data and every lookup for those 4 zones would silently miss.
+            league_df = league_df.copy()
+            unsplit_mask = ~league_df["SHOT_ZONE_BASIC"].isin(SPLIT_BASIC_ZONES)
+            league_df.loc[unsplit_mask, "SHOT_ZONE_AREA"] = ""
 
-            for zone_basic, row in grouped.iterrows():
+            grouped = league_df.groupby(["SHOT_ZONE_BASIC", "SHOT_ZONE_AREA"])[["FGA", "FGM"]].sum()
+
+            for (zone_basic, zone_area), row in grouped.iterrows():
                 attempts = int(row["FGA"])
                 makes = int(row["FGM"])
                 if attempts <= 0:
                     continue
                 LeagueZoneAverage.objects.update_or_create(
-                    season=season, zone_basic=zone_basic,
+                    season=season, zone_basic=zone_basic, zone_area=zone_area,
                     defaults={"attempts": attempts, "makes": makes},
                 )
                 total_zones += 1
                 pct = 100 * makes / attempts
-                self.stdout.write(f"  {zone_basic}: {makes}/{attempts} ({pct:.1f}%)")
+                label = f"{zone_basic} ({zone_area})" if zone_area else zone_basic
+                self.stdout.write(f"  {label}: {makes}/{attempts} ({pct:.1f}%)")
 
             time.sleep(1)
 
