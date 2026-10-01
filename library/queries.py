@@ -10,12 +10,33 @@ drift apart.
 from django.db.models import Count, Q
 
 from .models import LeagueZoneAverage
+from .zone_wedges import combined_zone_key, zone_display_label, SPLIT_BASIC_ZONES
 from .shot_types import category_expression, CATEGORY_LABELS
 
 # Below this many attempts in a zone, we don't compute a league-average
 # diff for it — a handful of corner-3 attempts reading "+22% vs league"
 # is noise, not signal.
 MIN_ZONE_ATTEMPTS_FOR_COMPARISON = 15
+
+AREA_SHORT = {
+    "Center(C)": "Center",
+    "Left Side(L)": "Left",
+    "Right Side(R)": "Right",
+    "Left Side Center(LC)": "Left Center",
+    "Right Side Center(RC)": "Right Center",
+    "Back Court(BC)": "Back Court",
+}
+NO_AREA_PREFIX = ("Restricted Area", "Backcourt", "Left Corner 3", "Right Corner 3")
+
+
+def zone_key_and_label(basic, area):
+    """Return (internal key, human-readable label) for a basic zone + area."""
+    if not area:
+        return basic, basic
+    key = basic + "|" + area
+    if basic in NO_AREA_PREFIX:
+        return key, basic
+    return key, AREA_SHORT.get(area, area) + " " + basic
 
 
 def get_player_shot_data(player, season=None, shot_type=None, url_for_season=None, url_for_type=None):
@@ -75,36 +96,50 @@ def get_player_shot_data(player, season=None, shot_type=None, url_for_season=Non
         for s in shots
     ]
 
-    zones = (
-        shots.values("zone_basic")
+    raw_zones = (
+        shots.values("zone_basic", "zone_area")
         .annotate(attempts=Count("id"), makes=Count("id", filter=Q(made=True)))
-        .order_by("-attempts")
     )
+
+    # nba_api fills zone_area for every shot, but we only split Mid-Range and
+    # Above the Break 3 by area. Everything else collapses back to one zone.
+    zone_totals = {}
+    for z in raw_zones:
+        basic = z["zone_basic"]
+        if not basic:
+            continue
+        area = z["zone_area"] if basic in SPLIT_BASIC_ZONES else ""
+        key = combined_zone_key(basic, area)
+        t = zone_totals.setdefault(key, {"basic": basic, "area": area, "attempts": 0, "makes": 0})
+        t["attempts"] += z["attempts"]
+        t["makes"] += z["makes"]
 
     league_lookup = {}
     if season:
-        league_lookup = {
-            row["zone_basic"]: row
-            for row in LeagueZoneAverage.objects.filter(season=season).values("zone_basic", "attempts", "makes")
-        }
+        for row in LeagueZoneAverage.objects.filter(season=season).values("zone_basic", "zone_area", "attempts", "makes"):
+            basic = row["zone_basic"]
+            area = row["zone_area"] if basic in SPLIT_BASIC_ZONES else ""
+            key = combined_zone_key(basic, area)
+            t = league_lookup.setdefault(key, {"attempts": 0, "makes": 0})
+            t["attempts"] += row["attempts"]
+            t["makes"] += row["makes"]
 
     zone_stats = []
-    for z in zones:
-        if not z["zone_basic"]:
-            continue
-        att = z["attempts"]
-        mk = z["makes"]
+    for key, t in sorted(zone_totals.items(), key=lambda kv: -kv[1]["attempts"]):
+        att = t["attempts"]
+        mk = t["makes"]
         pct = round(100 * mk / att) if att else 0
 
         league_pct = None
         diff = None
-        league_row = league_lookup.get(z["zone_basic"])
+        league_row = league_lookup.get(key)
         if league_row and league_row["attempts"] and att >= MIN_ZONE_ATTEMPTS_FOR_COMPARISON:
             league_pct = round(100 * league_row["makes"] / league_row["attempts"], 1)
             diff = round(pct - league_pct, 1)
 
         zone_stats.append({
-            "zone": z["zone_basic"],
+            "zone": key,
+            "zone_label": zone_display_label(t["basic"], t["area"]),
             "attempts": att,
             "makes": mk,
             "pct": pct,

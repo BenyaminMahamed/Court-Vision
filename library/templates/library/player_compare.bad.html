@@ -78,7 +78,7 @@
     <div class="zone-table">
         {% for z in zone_stats %}
 <div class="zone-row">
-    <span class="zone-name">{{ z.zone_label }}</span>
+    <span class="zone-name">{{ z.zone }}</span>
     <span class="zone-bar-wrap"><span class="zone-bar" style="width: {{ z.pct }}%;"></span></span>
     <span class="zone-pct">{{ z.pct }}%</span>
     <span class="zone-att">{{ z.makes }}/{{ z.attempts }}</span>
