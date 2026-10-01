@@ -126,18 +126,28 @@
     // Interior wedge boundaries (degrees from straight up, negative = left),
     // matching classify_zone_area in zone_wedges.py.
     var SPLIT_ZONES = {
-        "Above the Break 3": {
-            region: ATB_REGION, clip: "atb",
-            bounds: [-CORNER_ANGLE, -18, 18, CORNER_ANGLE],
-            labels: [[45, 225], [118, 160], [250, 110], [382, 160], [455, 225]],
-            small: [true, false, false, false, true]
-        },
-        "Mid-Range": {
-            region: MR_REGION, clip: "mr",
-            bounds: [-54, -18, 18, 54],
-            labels: [[100, 385], [128, 250], [250, 228], [372, 250], [400, 385]],
-            small: [false, false, false, false, false]
-        }
+      // 2K Layer 1: Paint / Restricted
+      "Restricted Area": { bounds: null, layer: "ra" },
+      "In The Paint (Non-RA)": { bounds: null, layer: "paint" },
+      
+      // 2K Layer 2: Close Range (3 Zones)
+      "Close Range Left": { bounds: [-90, -30], layer: "close" },
+      "Close Range Center": { bounds: [-30, 30], layer: "close" },
+      "Close Range Right": { bounds: [30, 90], layer: "close" },
+
+      // 2K Layer 3: Mid-Range (5 Zones)
+      "Mid-Range Left": { bounds: [-90, -54], layer: "mid" },
+      "Mid-Range Left-Center": { bounds: [-54, -18], layer: "mid" },
+      "Mid-Range Center": { bounds: [-18, 18], layer: "mid" },
+      "Mid-Range Right-Center": { bounds: [18, 54], layer: "mid" },
+      "Mid-Range Right": { bounds: [54, 90], layer: "mid" },
+
+      // 2K Layer 4: 3-Pointers (5 Zones)
+      "Left Corner 3": { bounds: "corner_left", layer: "three" },
+      "Above the Break 3 Left": { bounds: [-54, -18], layer: "three" },
+      "Above the Break 3 Center": { bounds: [-18, 18], layer: "three" },
+      "Above the Break 3 Right": { bounds: [18, 54], layer: "three" },
+      "Right Corner 3": { bounds: "corner_right", layer: "three" }
     };
 
     var ZONE_ORDER = [];
