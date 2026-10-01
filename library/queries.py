@@ -1,6 +1,6 @@
-import math
+﻿import math
 from django.db.models import Count, Q, F
-from .models import Shot, LeagueZoneAverages
+from .models import Shot, LeagueZoneAverage
 from .zone_wedges import zone_display_label
 
 def get_player_shot_data(player_id, season="2023-24", shot_type=None):
@@ -22,8 +22,8 @@ def get_player_shot_data(player_id, season="2023-24", shot_type=None):
         shots = shots.filter(shot_type__icontains=filter_val)
 
     # Fetch League Averages for 2023-24
-    league_avg_qs = LeagueZoneAverages.objects.filter(season=season)
-    league_dict = {la.zone_area: la.fg_pct for la in league_avg_qs if la.zone_area}
+    league_avg_qs = LeagueZoneAverage.objects.filter(season=season)
+    league_dict = {la.zone_area: la.fg_pct for la in league_avg_qs if la.zone_area} 
 
     # Aggregate shots grouped by zone_area
     zone_counts = (
