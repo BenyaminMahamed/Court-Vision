@@ -96,9 +96,17 @@ WSGI_APPLICATION = 'courtvision.wsgi.application'
 DATABASES = {
     'default': dj_database_url.config(
         default=f"sqlite:///{BASE_DIR / 'db.sqlite3'}",
-        conn_max_age=600
+        conn_max_age=600,
+        ssl_require=False  # Handled by ?sslmode=require in your Neon connection string
     )
 }
+
+# Explicit override safeguard for production environments like Render
+if os.environ.get('DATABASE_URL'):
+    DATABASES['default'] = dj_database_url.parse(
+        os.environ.get('DATABASE_URL'),
+        conn_max_age=600
+    )
 
 
 # Password validation
