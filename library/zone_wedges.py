@@ -46,8 +46,10 @@ def classify_zone_area(loc_x, loc_y, zone_basic):
 
     angle = math.degrees(math.atan2(loc_x, loc_y)) if (loc_x or loc_y) else 0.0
 
-    # Five equal 36-degree sectors for both rings, so the wedges line up.
-    bounds = [-90, -54, -18, 18, 54, 90]
+    if zone_basic == "Mid-Range":
+        bounds = [-90, -54, -18, 18, 54, 90]
+    else:  # Above the Break 3 (bounded by corner lines)
+        bounds = [-_CORNER_ANGLE, -_CORNER_ANGLE * 0.6, -_CORNER_ANGLE * 0.2, _CORNER_ANGLE * 0.2, _CORNER_ANGLE * 0.6, _CORNER_ANGLE]
 
     for i in range(5):
         if bounds[i] <= angle <= bounds[i + 1]:
