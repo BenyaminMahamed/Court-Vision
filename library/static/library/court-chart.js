@@ -87,7 +87,7 @@
         setShots(shots);
         return { svg: svg, dotsLayer: dotsLayer, setShots: setShots };
     }
-
+ 
     var HOOP_X = 250;
     var HOOP_Y = 417;
     var FAR = 1000;
