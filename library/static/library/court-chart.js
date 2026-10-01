@@ -128,7 +128,7 @@
     var SPLIT_ZONES = {
         "Above the Break 3": {
             region: ATB_REGION, clip: "atb",
-            bounds: [-54, -18, 18, 54],
+            bounds: [-CORNER_ANGLE, -18, 18, CORNER_ANGLE],
             labels: [[45, 225], [118, 160], [250, 110], [382, 160], [455, 225]],
             small: [true, false, false, false, true]
         },
