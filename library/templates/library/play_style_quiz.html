@@ -1,0 +1,107 @@
+{% extends "library/base.html" %}
+
+{% block title %}Play-Style Quiz ? Court Vision{% endblock %}
+
+{% block content %}
+<a href="{% url 'library:action_list' %}" class="backlink">&larr; Back to actions</a>
+
+<p class="eyebrow">Find Your Game</p>
+<h1 class="page-title">Play-Style Quiz</h1>
+
+<style>
+    .quiz-result { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 28px; margin-top: 26px; }
+    .result-label { font-family: var(--display); font-weight: 700; font-size: 32px; text-transform: uppercase; margin: 6px 0 10px; color: var(--accent); }
+
+    .quiz-actions-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 14px; margin-top: 18px; }
+    .quiz-action-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 16px 18px; display: flex; flex-direction: column; gap: 6px; transition: border-color 0.15s; }
+    .quiz-action-card:hover { border-color: var(--border-lit); }
+    .qa-name { font-family: var(--display); font-weight: 700; font-size: 17px; text-transform: uppercase; }
+    .qa-diff { font-family: var(--mono); font-size: 10.5px; color: var(--slate); text-transform: uppercase; letter-spacing: 0.08em; }
+
+    .quiz-players { display: flex; flex-direction: column; gap: 8px; margin-top: 18px; }
+    .quiz-player-row { display: flex; align-items: center; gap: 14px; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 12px 18px; transition: border-color 0.15s; }
+    .quiz-player-row:hover { border-color: var(--border-lit); }
+    .quiz-player-photo { width: 44px; height: 44px; border-radius: 50%; object-fit: cover; background: var(--raised); flex-shrink: 0; }
+    .qp-name { font-family: var(--display); font-weight: 700; font-size: 15px; text-transform: uppercase; flex: 1; }
+    .qp-pct { font-family: var(--mono); font-size: 12px; color: var(--accent); }
+    .qp-att { font-family: var(--mono); font-size: 11px; color: var(--slate); }
+
+    .quiz-form { margin-top: 30px; display: flex; flex-direction: column; gap: 26px; }
+    .quiz-question { border: none; padding: 0; }
+    .quiz-question legend { font-family: var(--display); font-weight: 700; font-size: 18px; margin-bottom: 14px; padding: 0; }
+    .quiz-option { display: flex; align-items: center; gap: 10px; padding: 11px 14px; border: 1px solid var(--border); border-radius: 8px; margin-bottom: 8px; cursor: pointer; transition: border-color 0.15s, background 0.15s; }
+    .quiz-option:hover { border-color: var(--border-lit); background: var(--surface); }
+    .quiz-option input { accent-color: var(--accent); }
+
+    .quiz-submit { font-family: var(--mono); font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; background: var(--accent); color: var(--base); border: none; border-radius: 6px; padding: 13px 24px; cursor: pointer; align-self: flex-start; transition: opacity 0.15s; }
+    .quiz-submit:hover { opacity: 0.88; }
+
+    .quiz-error { background: var(--accent-soft); border: 1px solid var(--accent-dim); color: var(--text); border-radius: 8px; padding: 14px 18px; margin-top: 20px; font-family: var(--mono); font-size: 12.5px; }
+
+    .quiz-retake { display: inline-block; margin-top: 30px; font-family: var(--mono); font-size: 11px; color: var(--slate); text-transform: uppercase; letter-spacing: 0.08em; }
+    .quiz-retake:hover { color: var(--accent); }
+</style>
+
+{% if result %}
+    <div class="quiz-result">
+        <p class="eyebrow">Your Result</p>
+        <h2 class="result-label">{{ result.label }}</h2>
+        <p class="lede">{{ result.description }}</p>
+    </div>
+
+    <div class="section-label">Study This <span class="hint">action category</span></div>
+    {% if recommended_actions %}
+    <div class="quiz-actions-grid">
+        {% for a in recommended_actions %}
+        <a href="{% url 'library:action_detail' a.slug %}" class="quiz-action-card">
+            <span class="qa-name">{{ a.name }}</span>
+            <span class="qa-diff">{{ a.get_difficulty_display }}</span>
+        </a>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty">No published actions in this category yet.</div>
+    {% endif %}
+
+    <div class="section-label">Players Like You <span class="hint">by real shot mix</span></div>
+    {% if top_players %}
+    <div class="quiz-players">
+        {% for row in top_players %}
+        <a href="{% url 'library:player_detail' row.player.pk %}" class="quiz-player-row">
+            {% if row.player.headshot_url %}
+            <img class="quiz-player-photo" src="{{ row.player.headshot_url }}" alt="{{ row.player.name }}" onerror="this.style.display='none'">
+            {% endif %}
+            <span class="qp-name">{{ row.player.name }}</span>
+            <span class="qp-pct">{{ row.pct }}% of shots</span>
+            <span class="qp-att">{{ row.attempts }} attempts</span>
+        </a>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty">Not enough shot data yet to recommend players for this style.</div>
+    {% endif %}
+
+    <a href="{% url 'library:play_style_quiz' %}" class="quiz-retake">&larr; Retake the quiz</a>
+
+{% else %}
+    {% if error %}
+    <div class="quiz-error">{{ error }}</div>
+    {% endif %}
+
+    <form method="post" class="quiz-form">
+        {% csrf_token %}
+        {% for q in questions %}
+        <fieldset class="quiz-question">
+            <legend>{{ q.prompt }}</legend>
+            {% for opt in q.options %}
+            <label class="quiz-option">
+                <input type="radio" name="{{ q.id }}" value="{{ opt.id }}" required>
+                <span>{{ opt.label }}</span>
+            </label>
+            {% endfor %}
+        </fieldset>
+        {% endfor %}
+        <button type="submit" class="quiz-submit">See my result</button>
+    </form>
+{% endif %}
+{% endblock %}

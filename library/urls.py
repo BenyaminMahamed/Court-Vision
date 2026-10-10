@@ -10,4 +10,5 @@ urlpatterns = [
     path("players/", views.player_list, name="player_list"),
     path("players/compare/", views.player_compare, name="player_compare"),
     path("players/<int:pk>/", views.player_detail, name="player_detail"),
+    path("play-style-quiz/", views.play_style_quiz, name="play_style_quiz"),
 ]
