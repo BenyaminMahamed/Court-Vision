@@ -1,9 +1,9 @@
-﻿from django.shortcuts import render, get_object_or_404
+from django.shortcuts import render, get_object_or_404
 from django.db.models import Count, Q
 from .models import Action, Player, Shot
 from .queries import get_player_shot_data
-from .shot_types import category_expression
-from .quiz_data import QUIZ_QUESTIONS, PLAYSTYLE_RESULTS, score_quiz
+from .shot_types import category_expression, CATEGORY_LABELS
+from .quiz_data import QUIZ_QUESTIONS, quiz_result
 
 
 def _url_with(request, **overrides):
@@ -34,13 +34,30 @@ def action_detail(request, slug):
 # ---- Player views ----
 
 def player_list(request):
+    season = request.GET.get("season")
+    seasons = list(Shot.objects.values_list("season", flat=True).distinct().order_by("season"))
+
+    shot_count_filter = Q(shots__season=season) if season and season in seasons else Q()
     players = (
         Player.objects
-        .annotate(shot_count=Count("shots"))
+        .annotate(shot_count=Count("shots", filter=shot_count_filter))
         .filter(shot_count__gt=0)
         .order_by("name")
     )
-    return render(request, "library/player_list.html", {"players": players})
+
+    season_pills = [
+        {"value": s, "url": _url_with(request, season=s), "active": s == season}
+        for s in seasons
+    ]
+
+    context = {
+        "players": players,
+        "seasons": seasons,
+        "season_pills": season_pills,
+        "active_season": season,
+        "all_seasons_url": _url_with(request, season=None),
+    }
+    return render(request, "library/player_list.html", context)
 
 
 def player_detail(request, pk):
@@ -73,10 +90,13 @@ def player_compare(request):
         .filter(shot_count__gt=0)
         .order_by("name")
     )
+    seasons = list(Shot.objects.values_list("season", flat=True).distinct().order_by("season"))
     context = {
         "players": players,
+        "seasons": seasons,
         "initial_a": request.GET.get("a", ""),
         "initial_b": request.GET.get("b", ""),
+        "initial_season": request.GET.get("season", ""),
     }
     return render(request, "library/player_compare.html", context)
 
@@ -84,12 +104,16 @@ def player_compare(request):
 def play_style_quiz(request):
     """
     GET: show the quiz.
-    POST: score the answers and recommend an Action category plus the real
-    players in the dataset whose actual shot mix leans hardest into the
-    resulting playstyle -- computed live from Shot data via the same
-    category_expression() shot_types.py already uses, not hardcoded.
+    POST: score the answers into a primary+secondary archetype (see
+    quiz_data.quiz_result), recommend an Action category, and surface the
+    real players in the dataset whose BEST SINGLE SEASON in the primary
+    category is strongest -- each player is credited for their peak year,
+    not an average blended across every season on file. So if a player
+    shot much better from a zone in 2024-25 than 2025-26, their 2024-25
+    number is what gets them ranked, and that season is shown alongside
+    their name.
     """
-    MIN_SHOTS_FOR_RECOMMENDATION = 150
+    MIN_SHOTS_PER_SEASON = 50
 
     if request.method == "POST":
         answers = {
@@ -101,12 +125,11 @@ def play_style_quiz(request):
             context = {
                 "questions": QUIZ_QUESTIONS,
                 "error": "Answer every question to get your result.",
-                "answers": answers,
             }
             return render(request, "library/play_style_quiz.html", context)
 
-        category = score_quiz(answers)
-        result = PLAYSTYLE_RESULTS[category]
+        result = quiz_result(answers)
+        category = result["primary"]
 
         recommended_actions = (
             Action.objects
@@ -114,37 +137,60 @@ def play_style_quiz(request):
             .order_by("difficulty", "name")[:3]
         )
 
-        category_counts = (
+        season_category_counts = (
             Shot.objects
             .annotate(shot_category=category_expression())
-            .values("player_id")
+            .values("player_id", "season")
             .annotate(
                 total=Count("id"),
                 in_category=Count("id", filter=Q(shot_category=category)),
             )
-            .filter(total__gte=MIN_SHOTS_FOR_RECOMMENDATION)
+            .filter(total__gte=MIN_SHOTS_PER_SEASON)
         )
 
-        ranked = sorted(
-            category_counts,
-            key=lambda row: row["in_category"] / row["total"],
-            reverse=True,
-        )[:5]
+        best_per_player = {}
+        for row in season_category_counts:
+            pct = row["in_category"] / row["total"]
+            pid = row["player_id"]
+            best = best_per_player.get(pid)
+            if best is None or pct > best["pct"]:
+                best_per_player[pid] = {
+                    "player_id": pid,
+                    "season": row["season"],
+                    "pct": pct,
+                    "attempts": row["total"],
+                }
+
+        ranked = sorted(best_per_player.values(), key=lambda row: -row["pct"])[:5]
 
         players_by_id = Player.objects.in_bulk([row["player_id"] for row in ranked])
         top_players = [
             {
                 "player": players_by_id[row["player_id"]],
-                "pct": round(100 * row["in_category"] / row["total"]),
-                "attempts": row["total"],
+                "season": row["season"],
+                "pct": round(100 * row["pct"]),
+                "attempts": row["attempts"],
             }
             for row in ranked
             if row["player_id"] in players_by_id
         ]
 
+        total_answers = sum(result["scores"].values())
+        breakdown = sorted(
+            [
+                {
+                    "key": key,
+                    "label": CATEGORY_LABELS[key],
+                    "pct": round(100 * count / total_answers) if total_answers else 0,
+                }
+                for key, count in result["scores"].items()
+            ],
+            key=lambda row: -row["pct"],
+        )
+
         context = {
             "result": result,
-            "category": category,
+            "breakdown": breakdown,
             "recommended_actions": recommended_actions,
             "top_players": top_players,
         }

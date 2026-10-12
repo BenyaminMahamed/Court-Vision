@@ -7,14 +7,23 @@
     <h1 class="page-title">Players</h1>
     <p class="lede">Shot charts and shooting splits from real NBA shot data. Pick a player to see where they score.</p>
 
+    {% if seasons %}
+    <div class="season-filter">
+        <a href="{{ all_seasons_url }}" class="season-pill {% if not active_season %}active{% endif %}">All seasons</a>
+        {% for s in season_pills %}
+            <a href="{{ s.url }}" class="season-pill {% if s.active %}active{% endif %}">{{ s.value }}</a>
+        {% endfor %}
+    </div>
+    {% endif %}
+
     {% if players %}
         <div class="lib-count">
             <span>{{ players|length }} player{{ players|length|pluralize }}</span>
-            <span>2025&ndash;26 season</span>
+            <span>{% if active_season %}{{ active_season }} season{% else %}All seasons{% endif %}</span>
         </div>
         <div class="action-grid">
             {% for player in players %}
-                <a class="action-card" href="{% url 'library:player_detail' player.pk %}">
+                <a class="action-card" href="{% url 'library:player_detail' player.pk %}{% if active_season %}?season={{ active_season }}{% endif %}">
                     <div class="card-top">
                         <span class="card-cat">{% if player.team %}{{ player.team }}{% else %}NBA{% endif %}</span>
                     </div>

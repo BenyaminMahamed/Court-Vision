@@ -12,6 +12,13 @@
     .quiz-result { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 28px; margin-top: 26px; }
     .result-label { font-family: var(--display); font-weight: 700; font-size: 32px; text-transform: uppercase; margin: 6px 0 10px; color: var(--accent); }
 
+    .quiz-breakdown { display: flex; flex-direction: column; gap: 10px; margin-top: 18px; }
+    .quiz-breakdown-row { display: grid; grid-template-columns: 150px 1fr 44px; align-items: center; gap: 14px; }
+    .qb-label { font-family: var(--mono); font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); }
+    .qb-bar-wrap { height: 8px; border-radius: 4px; background: var(--raised); overflow: hidden; }
+    .qb-bar { display: block; height: 100%; background: var(--accent); border-radius: 4px; }
+    .qb-pct { font-family: var(--mono); font-size: 12px; color: var(--text); text-align: right; }
+
     .quiz-actions-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 14px; margin-top: 18px; }
     .quiz-action-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 16px 18px; display: flex; flex-direction: column; gap: 6px; transition: border-color 0.15s; }
     .quiz-action-card:hover { border-color: var(--border-lit); }
@@ -23,6 +30,7 @@
     .quiz-player-row:hover { border-color: var(--border-lit); }
     .quiz-player-photo { width: 44px; height: 44px; border-radius: 50%; object-fit: cover; background: var(--raised); flex-shrink: 0; }
     .qp-name { font-family: var(--display); font-weight: 700; font-size: 15px; text-transform: uppercase; flex: 1; }
+    .qp-season { font-family: var(--mono); font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; }
     .qp-pct { font-family: var(--mono); font-size: 12px; color: var(--accent); }
     .qp-att { font-family: var(--mono); font-size: 11px; color: var(--slate); }
 
@@ -49,6 +57,17 @@
         <p class="lede">{{ result.description }}</p>
     </div>
 
+    <div class="section-label">Your Breakdown <span class="hint">across all 8 answers</span></div>
+    <div class="quiz-breakdown">
+        {% for row in breakdown %}
+        <div class="quiz-breakdown-row">
+            <span class="qb-label">{{ row.label }}</span>
+            <span class="qb-bar-wrap"><span class="qb-bar" style="width: {{ row.pct }}%;"></span></span>
+            <span class="qb-pct">{{ row.pct }}%</span>
+        </div>
+        {% endfor %}
+    </div>
+
     <div class="section-label">Study This <span class="hint">action category</span></div>
     {% if recommended_actions %}
     <div class="quiz-actions-grid">
@@ -63,15 +82,16 @@
     <div class="empty">No published actions in this category yet.</div>
     {% endif %}
 
-    <div class="section-label">Players Like You <span class="hint">by real shot mix</span></div>
+    <div class="section-label">Players Like You <span class="hint">by best single-season shot mix</span></div>
     {% if top_players %}
     <div class="quiz-players">
         {% for row in top_players %}
-        <a href="{% url 'library:player_detail' row.player.pk %}" class="quiz-player-row">
+        <a href="{% url 'library:player_detail' row.player.pk %}?season={{ row.season }}" class="quiz-player-row">
             {% if row.player.headshot_url %}
             <img class="quiz-player-photo" src="{{ row.player.headshot_url }}" alt="{{ row.player.name }}" onerror="this.style.display='none'">
             {% endif %}
             <span class="qp-name">{{ row.player.name }}</span>
+            <span class="qp-season">{{ row.season }}</span>
             <span class="qp-pct">{{ row.pct }}% of shots</span>
             <span class="qp-att">{{ row.attempts }} attempts</span>
         </a>
